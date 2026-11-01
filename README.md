@@ -19,10 +19,19 @@ a pty backend, with only `/token` and `/ws` proxied to it.
 
 ## CI/CD and re-provisioning
 
-A push to `main` runs the tests, then CI tars the release and pipes it to a
-forced command on this host, which runs the provisioner. See
-[docs/deployment.md](docs/deployment.md) for the secrets, the one-time deploy
-key bootstrap, and rollback.
+Repository: <https://github.com/stravo1/web-terminal>. A push to `main` runs the
+tests, then CI tars the release and pipes it to a forced command on this host,
+which runs the provisioner. See [docs/deployment.md](docs/deployment.md) for the
+secrets, the one-time deploy key bootstrap, and rollback.
+
+Two checkouts live on this machine:
+
+| Path                      | Role                                         |
+| ------------------------- | -------------------------------------------- |
+| `~/projects/web-terminal` | development clone, where you edit and commit |
+| `~/web-terminal`          | deploy target, rsynced by CI on every push   |
+
+Never edit `~/web-terminal` by hand: the next deploy overwrites it.
 
 Locally, the provisioner is also the manual deploy:
 
