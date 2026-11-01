@@ -348,6 +348,7 @@ class KeyBar {
     button.className = "key action-key";
     button.textContent = action.label;
     button.setAttribute("aria-label", action.labelText);
+    this.wireFocusKeeper(button);
     button.addEventListener("click", () => this.onAction(action.id));
     return button;
   }
@@ -357,8 +358,17 @@ class KeyBar {
     button.type = "button";
     button.className = definition.modifier ? "key modifier" : "key";
     button.textContent = definition.label;
+    this.wireFocusKeeper(button);
     button.addEventListener("click", () => this.press(definition));
     return button;
+  }
+
+  // The default of a pointer press moves focus to the button, which blurs the
+  // terminal textarea and closes the soft keyboard. Suppressing it keeps the
+  // keys' focus — and the keyboard — where it was. Touch scrolling still works:
+  // pointerdown does not cancel scrolling the way touchstart would.
+  wireFocusKeeper(button) {
+    button.addEventListener("pointerdown", (event) => event.preventDefault());
   }
 
   press(definition) {
@@ -404,6 +414,7 @@ class TerminalApp {
       must("keys"),
       (data, armed) => {
         this.sendInput(applyModifiers(data, armed));
+        this.view.focus();
       },
       (action) => this.runAction(action),
     );
@@ -436,6 +447,7 @@ class TerminalApp {
     } else if (action === "copy") {
       this.copySelection();
     }
+    this.view.focus();
   }
 
   async pasteFromClipboard() {
