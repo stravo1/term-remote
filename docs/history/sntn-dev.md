@@ -77,6 +77,16 @@ shows an online dot and a shell. DevTools → Application → Manifest confirms 
    Caddyfile and Authelia configuration migrated on the first deploy instead of ending
    up with two site blocks.
 
+**2026-11-01 — fixed the terminal not working on the phone.**
+
+The service worker cached the shell, so the phone paired a stale `index.html`
+with a fresh `app.js`. The script looked up a button the stale page did not
+have, threw before connecting, and left a gray dot and a blank screen. The
+service worker is gone, the shell is served with `Cache-Control: no-cache`, the
+script refuses to start when an element id is missing, and an expired login
+session now says so instead of retrying forever. A repository test pins the
+id contract between `app/index.html` and `app/app.js`.
+
 ## Known drift
 
 Before this terminal existed, the pi remote Caddyfile copies under `~/pi-remote/deploy/` and

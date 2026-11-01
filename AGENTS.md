@@ -22,7 +22,8 @@ design system, Caddy forward-auth, and Authelia TOTP.
   colors anywhere; the page supports light and dark through `[data-theme]`.
 - Regenerate `app/vendor/espresso.css` and the fonts with `node tools/generate-espresso.mjs` after a
   frappe-ui upgrade; do not edit the generated files.
-- Bump `CACHE_NAME` in `app/sw.js` whenever shell files change, or installed clients keep the old page.
+- There is no service worker, on purpose: a cached page paired with a fresh script is a terminal
+  that never connects. Every element id `app.js` reads must exist in `app/index.html`.
 - Write docs in plain English: short sentences, active voice, no em dashes.
 - Use Conventional Commits: `<type>[optional scope]: <short imperative summary>`.
 - Ask the user before you commit or push.

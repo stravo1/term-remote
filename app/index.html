@@ -12,10 +12,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Terminal" />
+    <meta name="color-scheme" content="dark" />
     <title>Terminal</title>
     <script>
-      // Paint the saved scheme before the app loads, so a light page does not flash dark.
-      // The status bar color follows the scheme the same way.
+      // Paint the saved scheme before the app loads, so a light page does not
+      // flash dark. The status bar color follows the scheme the same way.
       try {
         const scheme = localStorage.getItem("term-remote:theme");
         const isDark = scheme === "dark" || (scheme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
@@ -24,7 +25,6 @@
         document.querySelector('meta[name="color-scheme"]').setAttribute("content", isDark ? "dark" : "light");
       } catch {}
     </script>
-    <meta name="color-scheme" content="dark" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />

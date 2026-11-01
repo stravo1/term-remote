@@ -134,19 +134,19 @@ safe-area or soft-keyboard handling. `app/` replaces it with:
   keyboard, with notch-safe insets.
 - **Font size** A−/A+, persisted in `localStorage`.
 - **Touch scrolling** through scrollback, reconnect with backoff, and a Reconnect button.
-- **Offline shell**: the service worker caches the app, so the installed icon still opens when the
-  host is unreachable, then reports a lost connection.
+- **No service worker, on purpose.** A cached page paired with a fresh script is a terminal that
+  never connects, so the shell is served with `Cache-Control: no-cache` and revalidated on every
+  load. Installability comes from the manifest alone.
 
 The protocol is small: binary frames, `0` + input, `1` + JSON resize, a JSON init frame with
 `AuthToken`, `columns` and `rows`, and `0` / `1` / `2` for output, window title and preferences from
 the server. `tests/protocol.test.mjs` starts a real ttyd and asserts each of those, so a ttyd upgrade
 that changes framing fails CI before it reaches the page.
 
-To change the frontend, edit `app/`, bump `CACHE_NAME` in `app/sw.js` (installed clients cache shell
-files), and re-run the provisioner. `xterm.js`, `addon-fit.js`, the Espresso tokens, and the Inter
+To change the frontend, edit `app/` and re-run the provisioner. `xterm.js`, `addon-fit.js`, the Espresso tokens, and the Inter
 and JetBrains Mono fonts are vendored in `app/vendor/`; the page makes no external requests at
 runtime. After a frappe-ui upgrade, refresh the tokens with
-`node tools/generate-espresso.mjs <path-to-frappe-ui>` and bump `CACHE_NAME`.
+`node tools/generate-espresso.mjs <path-to-frappe-ui>`.
 
 ## CI/CD
 

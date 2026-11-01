@@ -63,11 +63,19 @@ function socketUrl() {
 
 async function requestToken() {
   const response = await fetch(ENDPOINTS.token, { cache: "no-store", credentials: "same-origin" });
-  if (!response.ok) {
-    throw new Error(`token request failed with ${response.status}`);
+  const expired = response.redirected || !response.ok || !(response.headers.get("content-type") ?? "").includes("json");
+  if (expired) {
+    throw new SessionExpiredError();
   }
   const payload = await response.json();
   return payload.token ?? "";
+}
+
+class SessionExpiredError extends Error {
+  constructor() {
+    super("the login session has expired");
+    this.name = "SessionExpiredError";
+  }
 }
 
 // Sticky Ctrl/Alt: applied to the next key, whether tapped on the key bar or typed.
@@ -354,15 +362,15 @@ class KeyBar {
 
 class TerminalApp {
   constructor() {
-    this.view = new TerminalView(document.querySelector("#terminal"));
-    this.keyBar = new KeyBar(document.querySelector("#keys"), (data, armed) => {
+    this.view = new TerminalView(must("terminal"));
+    this.keyBar = new KeyBar(must("keys"), (data, armed) => {
       this.sendInput(applyModifiers(data, armed));
     });
-    this.status = document.querySelector("#status");
-    this.title = document.querySelector("#title");
-    this.overlay = document.querySelector("#overlay");
-    this.overlayText = document.querySelector("#overlay-text");
-    this.retryButton = document.querySelector("#retry");
+    this.status = must("status");
+    this.title = must("title");
+    this.overlay = must("overlay");
+    this.overlayText = must("overlay-text");
+    this.retryButton = must("retry");
     this.socket = new TerminalSocket({
       onOutput: (data) => this.view.write(data),
       onWindowTitle: (title) => this.setTitle(title),
@@ -377,9 +385,9 @@ class TerminalApp {
   }
 
   wireControls() {
-    document.querySelector("#font-up").addEventListener("click", () => this.changeFontSize(FONT.step));
-    document.querySelector("#font-down").addEventListener("click", () => this.changeFontSize(-FONT.step));
-    document.querySelector("#theme-toggle").addEventListener("click", () => {
+    must("font-up").addEventListener("click", () => this.changeFontSize(FONT.step));
+    must("font-down").addEventListener("click", () => this.changeFontSize(-FONT.step));
+    must("theme-toggle").addEventListener("click", () => {
       setScheme(!isDarkScheme());
       this.view.applyTheme();
     });
@@ -425,6 +433,10 @@ class TerminalApp {
       await this.socket.connect(this.view.columns, this.view.rows);
     } catch (error) {
       console.error("[terminal] connect failed", error);
+      if (error instanceof SessionExpiredError) {
+        this.showOverlay("Login session expired — reload the page to sign in again");
+        return;
+      }
       this.showOverlay("Could not reach the terminal");
       this.scheduleReconnect();
     }
@@ -492,16 +504,27 @@ class TerminalApp {
   }
 }
 
+// Looks an element up by id and refuses to continue without it: a missing id
+// means the script and the markup are out of step (a stale cached page), and
+// half a terminal is worse than a clear error.
+function must(id) {
+  const element = document.getElementById(id);
+  if (!element) {
+    throw new Error(`#${id} is missing; the page and app.js are out of step — reload the page`);
+  }
+  return element;
+}
+
 function boot() {
   if (!window.Terminal || !window.FitAddon) {
     document.body.textContent = "Terminal assets failed to load.";
     return;
   }
-  new TerminalApp();
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js").catch((error) => {
-      console.warn("[terminal] service worker registration failed", error);
-    });
+  try {
+    new TerminalApp();
+  } catch (error) {
+    console.error("[terminal] failed to start", error);
+    document.body.textContent = `Terminal failed to start: ${error.message}`;
   }
 }
 

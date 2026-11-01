@@ -11,7 +11,15 @@
 		@terminal_api path /token /ws
 		reverse_proxy @terminal_api 127.0.0.1:@PORT@
 
+		# The shell must revalidate every load; a cached page paired with a fresh
+		# script is a terminal that never connects.
+		header /index.html Cache-Control "no-cache"
+		header / Cache-Control "no-cache"
+		header /vendor/* Cache-Control "public, max-age=31536000, immutable"
+		header /icons/* Cache-Control "public, max-age=31536000, immutable"
+		header /manifest.webmanifest Cache-Control "no-cache"
 		header /manifest.webmanifest Content-Type application/manifest+json
+
 		root * @APP_ROOT@
 		file_server
 	}

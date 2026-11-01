@@ -45,21 +45,20 @@ test("manifest icons exist and match their declared size", () => {
   }
 });
 
-test("service worker precaches only files that exist", () => {
-  const source = read("app/sw.js");
-  const block = source.match(/const SHELL = \[([\s\S]*?)\];/);
-  assert.ok(block, "sw.js should declare a SHELL precache list");
+test("every element id the script expects exists in the markup", () => {
+  // A stale cached page paired with a fresh script used to kill the app before
+  // it ever connected. This pins the contract between index.html and app.js.
+  const markup = read("app/index.html");
+  const script = read("app/app.js");
 
-  const entries = [...block[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
-  assert.ok(entries.length > 5, "precache list looks too small");
+  const wanted = new Set([...script.matchAll(/must\("([\w-]+)"\)/g)].map((match) => match[1]));
+  assert.ok(wanted.size >= 6, "the script should look up its elements by id");
 
-  for (const entry of entries) {
-    const file = entry === "/" ? "index.html" : entry;
-    assert.ok(existsSync(appPath(file)), `service worker precaches a missing file: ${entry}`);
+  for (const id of wanted) {
+    assert.ok(markup.includes(`id="${id}"`), `index.html has no element with id "${id}"`);
   }
 
-  assert.match(source, /const CACHE_NAME = "[^"]+"/, "sw.js needs a cache name to bump on shell changes");
-  assert.match(source, /url\.pathname === "\/token"/, "the token endpoint must never be cached");
+  assert.ok(!existsSync(join(ROOT, "app", "sw.js")), "the service worker was removed; do not reintroduce it");
 });
 
 test("every template placeholder is substituted by the provisioner", () => {
