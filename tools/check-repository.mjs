@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const SHELL_SCRIPTS = ["setup-term-remote.sh", "deploy/receive.sh", "deploy/deploy-key.sh"];
-const JAVASCRIPT = ["app/app.js", "app/sw.js"];
+const JAVASCRIPT = ["app/app.js"];
 const PYTHON = ["tools/generate-icons.py"];
 const JSON_FILES = ["package.json", "app/manifest.webmanifest"];
 
