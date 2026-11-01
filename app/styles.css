@@ -22,6 +22,16 @@ body {
   font-family: var(--font-ui);
 }
 
+/* iOS 26 standalone quirk, per frappe-ui's MobileShell note: an installed app's
+   viewport is sized short by the status bar height, the top safe-area inset
+   reports 0, and content lands under the clock. A page at least as tall as the
+   screen gets the full viewport, and the cap keeps 100lvh from overstating it. */
+@media (display-mode: standalone) {
+  html {
+    min-height: min(100lvh, calc(100% + env(safe-area-inset-top)));
+  }
+}
+
 :where(button, [tabindex]):focus-visible {
   outline: var(--focus-outline-default);
   outline-offset: 0px;
@@ -62,6 +72,16 @@ body {
   gap: 0.3rem;
   overflow-x: auto;
   padding: 0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom));
+
+  /* With the keyboard up, the visual viewport ends above the home indicator, so
+   the inset padding becomes a dead band; drop it while the keyboard is open. */
+  .keys {
+    padding-bottom: calc(0.4rem + env(safe-area-inset-bottom));
+  }
+
+  body.keyboard-open .keys {
+    padding-bottom: 0.4rem;
+  }
   background: var(--surface-gray-1);
   border-top: 1px solid var(--outline-gray-2);
   scrollbar-width: none;

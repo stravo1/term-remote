@@ -517,15 +517,28 @@ class TerminalApp {
       attributes: true,
       attributeFilter: ["data-theme"],
     });
+
+    const viewport = window.visualViewport;
+
+    // The keyboard shrinks the visual viewport while the layout viewport stays
+    // full height, and iOS pushes the shifted viewport up, which crops the top
+    // of the terminal under the status bar. Pin the scroll back to zero, size
+    // the app to the visible viewport, and mark the keyboard state so the key
+    // bar can drop its home-indicator padding while the keyboard is up.
     const applyHeight = () => {
-      const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const height = viewport ? viewport.height : window.innerHeight;
+      if (viewport && viewport.offsetTop > 0) {
+        window.scrollTo(0, 0);
+      }
+      document.body.classList.toggle("keyboard-open", Boolean(viewport) && viewport.height < window.innerHeight * 0.9);
       document.documentElement.style.setProperty("--app-height", `${height}px`);
       this.view.fit();
     };
     applyHeight();
     window.addEventListener("resize", applyHeight);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", applyHeight);
+    if (viewport) {
+      viewport.addEventListener("resize", applyHeight);
+      viewport.addEventListener("scroll", applyHeight);
     }
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && !this.socket.isOpen) {
