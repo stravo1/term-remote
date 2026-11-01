@@ -47,6 +47,14 @@ body {
   height: 100%;
 }
 
+/* xterm parks its hidden textarea on the cursor cell while focused, and iOS
+   paints its own blue caret there. The visible cursor is xterm's own; the
+   native one goes. */
+#terminal .xterm-helper-textarea {
+  caret-color: transparent;
+  color: transparent;
+}
+
 /* The only chrome: one bar at the bottom holding the actions and the keys. */
 .keys {
   display: flex;
