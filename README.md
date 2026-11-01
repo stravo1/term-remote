@@ -121,7 +121,10 @@ the same way.
 ttyd's own client is desktop-shaped: no Escape, Tab, Ctrl or arrow keys, no home-screen install, no
 safe-area or soft-keyboard handling. `app/` replaces it with:
 
-- **One bottom bar holds everything**: font size, scheme toggle, and the keys — Esc, Tab, sticky
+- **Copy and paste keys** in the bottom bar: Paste reads the clipboard (with bracketed-paste
+  wrapping when the program in the pty asks for it), Copy writes the current selection back.
+  Paste needs a tap to satisfy iOS clipboard permission; Copy needs a selection first.
+- **One bottom bar holds everything**: font size, scheme toggle, copy/paste, and the keys — Esc, Tab, sticky
   Ctrl/Alt, arrows, Home, End, PgUp, PgDn, `|`, `-`, `/`, `~`. Sticky modifiers also apply to the
   next character typed on the soft keyboard, so Ctrl-C and Esc work in vim or tmux. There is no
   header; the terminal owns the whole screen.

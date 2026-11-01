@@ -13,6 +13,8 @@ const ACTION_DEFINITIONS = [
   { id: "font-down", label: "A−", labelText: "Smaller text" },
   { id: "font-up", label: "A+", labelText: "Larger text" },
   { id: "theme", label: "◐", labelText: "Switch color scheme" },
+  { id: "paste", label: "Paste", labelText: "Paste from clipboard" },
+  { id: "copy", label: "Copy", labelText: "Copy selection" },
 ];
 
 const KEY_SEQUENCES = {
@@ -255,6 +257,21 @@ class TerminalView {
     this.terminal.options.theme = espressoTerminalTheme();
   }
 
+  getSelection() {
+    return this.terminal.getSelection();
+  }
+
+  clearSelection() {
+    this.terminal.clearSelection();
+  }
+
+  // terminal.paste normalizes newlines, wraps in bracketed-paste markers when
+  // the program in the pty asked for them, and routes through onData.
+  pasteText(text) {
+    this.terminal.focus();
+    this.terminal.paste(text);
+  }
+
   onData(handler) {
     this.terminal.onData(handler);
   }
@@ -401,6 +418,7 @@ class TerminalApp {
     });
     this.attempt = 0;
     this.retryTimer = null;
+    this.noticeTimer = null;
     this.retryButton.addEventListener("click", () => this.connect());
     this.wireInput();
     this.wireViewport();
@@ -414,7 +432,63 @@ class TerminalApp {
       this.changeFontSize(-FONT.step);
     } else if (action === "theme") {
       setScheme(!isDarkScheme());
+    } else if (action === "paste") {
+      this.pasteFromClipboard();
+    } else if (action === "copy") {
+      this.copySelection();
     }
+  }
+
+  async pasteFromClipboard() {
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      this.showNotice("Clipboard is not available here");
+      return;
+    }
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        this.showNotice("The clipboard is empty");
+        return;
+      }
+      this.view.pasteText(text);
+    } catch (error) {
+      console.warn("[terminal] paste failed", error);
+      this.showNotice("Paste was not allowed — use the long-press menu");
+    }
+  }
+
+  async copySelection() {
+    const selection = this.view.getSelection();
+    if (!selection) {
+      this.showNotice("Select text first: drag across the screen");
+      return;
+    }
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      this.showNotice("Clipboard is not available here");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(selection);
+      this.view.clearSelection();
+      this.showNotice("Copied");
+    } catch (error) {
+      console.warn("[terminal] copy failed", error);
+      this.showNotice("Copy was not allowed");
+    }
+  }
+
+  // A transient message in the same surface as the error overlay. It yields to
+  // any real overlay state, which replaces it immediately.
+  showNotice(text) {
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = null;
+    this.showOverlay(text);
+    this.noticeTimer = setTimeout(() => {
+      this.noticeTimer = null;
+      if (this.overlayText.textContent === text) {
+        this.hideOverlay();
+      }
+    }, 2200);
   }
 
   wireInput() {
@@ -512,11 +586,15 @@ class TerminalApp {
   }
 
   showOverlay(message) {
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = null;
     this.overlayText.textContent = message;
     this.overlay.hidden = false;
   }
 
   hideOverlay() {
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = null;
     this.overlay.hidden = true;
   }
 }
