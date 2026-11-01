@@ -25,30 +25,30 @@ script. A push to `main` changes the live site once the tests pass.
 
 They live on the `production` environment, not at repository level:
 
-| Secret               | Value                                |
-| -------------------- | ------------------------------------ |
-| `DEPLOY_SSH_KEY`     | private key of the CI deploy keypair |
-| `DEPLOY_KNOWN_HOSTS` | `ssh-keyscan` output for the host    |
-| `DEPLOY_USER`        | `stravo1`                            |
-| `DEPLOY_HOST`        | address of the VM                    |
+| Secret               | Value                                   |
+| -------------------- | --------------------------------------- |
+| `DEPLOY_SSH_KEY`     | private key of the CI deploy keypair    |
+| `DEPLOY_KNOWN_HOSTS` | `ssh-keyscan` output for the host       |
+| `DEPLOY_USER`        | user on the host that owns the services |
+| `DEPLOY_HOST`        | address of the VM                       |
 
 ## One-time host bootstrap
 
 ```sh
-gh repo clone stravo1/web-terminal ~/web-terminal
+gh repo clone <owner>/web-terminal ~/web-terminal
 ssh-keygen -t ed25519 -N "" -C web-terminal-ci -f /tmp/web-terminal-ci
 bash ~/web-terminal/deploy/deploy-key.sh /tmp/web-terminal-ci.pub
 
 gh secret set DEPLOY_SSH_KEY --env production < /tmp/web-terminal-ci
 ssh-keyscan -p 22 <host> | gh secret set DEPLOY_KNOWN_HOSTS --env production
-printf '%s' stravo1 | gh secret set DEPLOY_USER --env production
+printf '%s' "$USER" | gh secret set DEPLOY_USER --env production
 printf '%s' <host> | gh secret set DEPLOY_HOST --env production
 
 shred -u /tmp/web-terminal-ci && rm -f /tmp/web-terminal-ci.pub
 ```
 
-`deploy-key.sh` removes only entries for its own checkout, so the pi remote
-deploy key keeps working. To revoke CI deploys, delete the line containing
+`deploy-key.sh` removes only entries for its own checkout, so deploy keys for other checkouts
+keep working. To revoke CI deploys, delete the line containing
 `command="…/web-terminal/deploy/receive.sh"` from `~/.ssh/authorized_keys`.
 
 ## Manual deploy

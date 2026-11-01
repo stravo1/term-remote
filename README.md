@@ -1,202 +1,177 @@
-# Web terminal (`term.sntn.dev`)
+# Web terminal
 
-A browser terminal for this VM: **ttyd** behind **Caddy** forward-auth and
-**Authelia** TOTP. Reachable from any device with a browser, no SSH client or
-VPN needed. Pushing to `main` on GitHub deploys it.
-
-```
-browser ──TLS──> Caddy ──forward_auth──> Authelia (127.0.0.1:9091)
-                    └──reverse_proxy───> ttyd (127.0.0.1:7681) ──> tmux "main"
-```
-
-ttyd binds loopback only and has no credentials of its own. Authelia is the
-only gate, so the terminal host is unreachable unless the proxy forwards it.
-The page itself is a custom mobile-first PWA in `app/`; ttyd is used purely as
-a pty backend, with only `/token` and `/ws` proxied to it.
-
-- terminal: <https://term.sntn.dev>
-- portal: <https://auth.sntn.dev>
-
-## CI/CD and re-provisioning
-
-Repository: <https://github.com/stravo1/web-terminal>. A push to `main` runs the
-tests, then CI tars the release and pipes it to a forced command on this host,
-which runs the provisioner. See [docs/deployment.md](docs/deployment.md) for the
-secrets, the one-time deploy key bootstrap, and rollback.
-
-Two checkouts live on this machine:
-
-| Path                      | Role                                         |
-| ------------------------- | -------------------------------------------- |
-| `~/projects/web-terminal` | development clone, where you edit and commit |
-| `~/web-terminal`          | deploy target, rsynced by CI on every push   |
-
-Never edit `~/web-terminal` by hand: the next deploy overwrites it.
-
-Locally, the provisioner is also the manual deploy:
-
-```bash
-./setup-web-terminal.sh          # idempotent: re-running changes nothing
-./setup-web-terminal.sh --force  # also overwrite a hand-edited ttyd unit
-```
-
-The script installs ttyd, writes the user unit, patches the Authelia rule and
-the Caddy site block, deploys the frontend, restarts what changed, then
-verifies. Everything it owns is wrapped in `# >>> web-terminal …` / `# <<<
-web-terminal` markers, so it replaces only its own blocks.
-
-It refuses to guess: if either config already contains an unmanaged rule or
-site block for the domain, it stops and tells you to remove that first.
-
-Overridable via environment, defaults shown:
-
-| Variable                           | Default                                |
-| ---------------------------------- | -------------------------------------- |
-| `WEB_TERMINAL_DOMAIN`              | `term.sntn.dev`                        |
-| `AUTHELIA_PORTAL_DOMAIN`           | `auth.sntn.dev`                        |
-| `AUTHELIA_POLICY`                  | `two_factor`                           |
-| `WEB_TERMINAL_PORT`                | `7681`                                 |
-| `WEB_TERMINAL_MAX_CLIENTS`         | `4`                                    |
-| `WEB_TERMINAL_TMUX_SESSION`        | `main`                                 |
-| `TTYD_VERSION`                     | `ttyd.version` (currently `1.7.7`)     |
-| `CADDY_CONFIG`                     | `~/.config/pi-remote/Caddyfile`        |
-| `AUTHELIA_CONFIG`                  | `~/.config/authelia/configuration.yml` |
-| `AUTHELIA_PORT`                    | `9091`                                 |
-| `CADDY_ADMIN`                      | `http://127.0.0.1:2019`                |
-| `CADDY_BINARY` / `AUTHELIA_BINARY` | resolved from `PATH`                   |
-
-Layout:
+A browser terminal for one Linux host. **ttyd** provides the pty, a small mobile-first **PWA**
+provides the UI, **Caddy** gates everything with forward-auth, and **Authelia** authenticates with
+TOTP. One idempotent script provisions the host, and GitHub Actions deploys it on push.
 
 ```
-setup-web-terminal.sh          provisioner (installs, patches, verifies)
-ttyd.version                   the one pinned ttyd release
+browser ──TLS──> Caddy ──forward_auth──> Authelia
+                    ├──/token, /ws─────> ttyd ──> tmux
+                    └──static files────> app/ (PWA)
+```
+
+## How it works
+
+- ttyd binds to `127.0.0.1` and has no credentials of its own. Authelia is the only gate, so the
+  pty is unreachable unless the proxy forwards to it.
+- The frontend in `app/` speaks ttyd's WebSocket protocol directly, so ttyd is reduced to a pty
+  backend: Caddy proxies only `/token` and `/ws` to it and serves the rest as static files.
+- `setup-web-terminal.sh` is the only thing that changes the host. It owns exactly one
+  marker-delimited block in the Caddyfile and one in the Authelia configuration, and nothing else.
+
+## Requirements
+
+- Linux with systemd and a working user session. Enable lingering if the services should survive
+  logout: `loginctl enable-linger "$USER"`.
+- Caddy and Authelia already running as **user** services. Authelia needs the file backend and its
+  forward-auth endpoint. The provisioner assumes Caddy's site config and Authelia's configuration
+  live under `~/.config`; override the paths with `CADDY_CONFIG` and `AUTHELIA_CONFIG`.
+- `tmux`, `curl`, `rsync`, `sed`, `awk`. Root is not needed: ttyd is a static binary installed into
+  `~/.local/bin`.
+- A DNS record for the terminal host, and ports 80/443 reachable, so Caddy can solve an ACME
+  challenge.
+
+## Quick start
+
+```sh
+git clone <this repository> ~/web-terminal
+cd ~/web-terminal
+WEB_TERMINAL_DOMAIN=term.example.com \
+AUTHELIA_PORTAL_DOMAIN=auth.example.com \
+./setup-web-terminal.sh
+```
+
+The script then:
+
+1. Installs the pinned ttyd release into `~/.local/bin` if it is missing.
+2. Renders and enables a user unit that runs `ttyd … tmux new -A -s main` on loopback.
+3. Copies `app/` to `~/.local/share/web-terminal/app`.
+4. Adds one Authelia access-control rule and one Caddy site block inside its own markers.
+5. Restarts only the services whose files changed, then verifies that ttyd answers, that Authelia
+   gates the domain, that Caddy serves it, and that the frontend is deployed.
+
+It is safe to re-run: a second run reports `unchanged` for everything. If Authelia or Caddy rejects
+the generated configuration, the script restores the backup it took and exits non-zero instead of
+restarting a broken service.
+
+It refuses to guess. If either config already contains an unmanaged rule or site block for the
+domain, it stops and tells you to remove that first, rather than creating a duplicate.
+
+`--force` overwrites a `ttyd.service` unit that the script does not consider its own. Other flags are
+documented in `./setup-web-terminal.sh --help`.
+
+After the first run, create the DNS record if you have not already. Caddy retries certificates on its
+own, or force it with `systemctl --user reload caddy`.
+
+## Configuration
+
+Every value below can be set in the environment. The defaults are defined at the top of
+`setup-web-terminal.sh`; `TTYD_VERSION` defaults to the contents of `ttyd.version`.
+
+| Variable                    | Purpose                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `WEB_TERMINAL_DOMAIN`       | public hostname of the terminal                                       |
+| `AUTHELIA_PORTAL_DOMAIN`    | hostname of the Authelia portal, used by the cert-failure message     |
+| `AUTHELIA_POLICY`           | access-control policy for the terminal site, for example `two_factor` |
+| `WEB_TERMINAL_PORT`         | loopback port for ttyd                                                |
+| `WEB_TERMINAL_MAX_CLIENTS`  | concurrent browser clients ttyd accepts                               |
+| `WEB_TERMINAL_TMUX_SESSION` | tmux session every client attaches to                                 |
+| `TTYD_VERSION`              | override the pinned ttyd release                                      |
+| `CADDY_CONFIG`              | path to the Caddyfile                                                 |
+| `AUTHELIA_CONFIG`           | path to the Authelia configuration                                    |
+| `AUTHELIA_PORT`             | Authelia listen port, used for forward-auth and health checks         |
+| `CADDY_ADMIN`               | Caddy admin API, used to confirm the site is live                     |
+| `APP_ROOT`                  | where the frontend is installed                                       |
+| `CADDY_BINARY`              | caddy executable, otherwise resolved from `PATH`                      |
+| `AUTHELIA_BINARY`           | authelia executable, otherwise resolved from `PATH`                   |
+
+## What the provisioner owns
+
+| Path                                  | What it does                              |
+| ------------------------------------- | ----------------------------------------- |
+| `~/.local/bin/ttyd`                   | static ttyd binary, no root needed        |
+| `~/.config/systemd/user/ttyd.service` | user unit, enabled and started            |
+| `$CADDY_CONFIG`                       | one marker block, the terminal site       |
+| `$AUTHELIA_CONFIG`                    | one marker block, the access-control rule |
+| `$APP_ROOT`                           | copy of `app/`, served by Caddy           |
+
+Before changing a file the script copies it to `<name>.bak.<epoch>`. Backups pile up across runs, so
+prune them now and then. Everything is a **user** unit, so it matches a Caddy and Authelia that run
+the same way.
+
+## Frontend
+
+ttyd's own client is desktop-shaped: no Escape, Tab, Ctrl or arrow keys, no home-screen install, no
+safe-area or soft-keyboard handling. `app/` replaces it with:
+
+- **Key bar** above the keyboard: Esc, Tab, sticky Ctrl/Alt, arrows, Home, End, PgUp, PgDn, `|`, `-`,
+  `/`, `~`. Sticky modifiers also apply to the next character typed on the soft keyboard, so Ctrl-C
+  and Esc work in vim or tmux.
+- **Installable**: Android/Chrome → ⋮ _Add to Home screen_; iOS/Safari → Share → _Add to Home
+  Screen_. Runs standalone, with no browser chrome.
+- **Keyboard-aware layout**: `dvh` plus `visualViewport` tracking keeps the key bar above the soft
+  keyboard, with notch-safe insets.
+- **Font size** A−/A+, persisted in `localStorage`.
+- **Touch scrolling** through scrollback, reconnect with backoff, and a Reconnect button.
+- **Offline shell**: the service worker caches the app, so the installed icon still opens when the
+  host is unreachable, then reports a lost connection.
+
+The protocol is small: binary frames, `0` + input, `1` + JSON resize, a JSON init frame with
+`AuthToken`, `columns` and `rows`, and `0` / `1` / `2` for output, window title and preferences from
+the server. `tests/protocol.test.mjs` starts a real ttyd and asserts each of those, so a ttyd upgrade
+that changes framing fails CI before it reaches the page.
+
+To change the frontend, edit `app/`, bump `CACHE_NAME` in `app/sw.js` (installed clients cache shell
+files), and re-run the provisioner. `xterm.js` and `addon-fit.js` are vendored in `app/vendor/`; the
+page makes no external requests at runtime.
+
+## CI/CD
+
+A push to `main` runs the tests, then the deploy job tars the release and pipes it to a restricted
+SSH key on the host. The key's forced command runs `deploy/receive.sh`, which rsyncs the checkout and
+runs the provisioner. A failed verification fails the deploy, so a broken change never lands quietly.
+
+Secrets live on the `production` environment: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_USER`,
+`DEPLOY_HOST`. See [docs/deployment.md](docs/deployment.md) for the one-time key bootstrap, the manual
+deploy path, and rollback.
+
+`ttyd.version` is the single owner of the pinned release: CI reads it to install the binary for the
+protocol test, and the provisioner reads it on the host.
+
+## Layout
+
+```
 app/                           PWA frontend (HTML, CSS, JS, icons, vendor)
 templates/                     the three files the provisioner renders
-deploy/receive.sh              forced command that CI runs on this host
+setup-web-terminal.sh          provisioner: installs, patches, restarts, verifies
+ttyd.version                   the pinned ttyd release
+deploy/receive.sh              forced command CI runs on the host
 deploy/deploy-key.sh           installs a CI deploy key in authorized_keys
 tests/                         node:test suite, including the ttyd protocol
 tools/check-repository.mjs     syntax and executable-bit checks
-tools/generate-icons.py        regenerates app/icons/*.png without a GUI lib
+tools/generate-icons.py        regenerates app/icons/*.png without a GUI library
 docs/deployment.md             CI, secrets, bootstrap, rollback
-docs/history/generic-scaffold  the early container variant, NOT deployed
+docs/history/                  reference deployment record and the early container variant
 ```
 
-Checks before a commit:
+## Checks
 
-```bash
-npm run check   # prettier, shellcheck, shell/JS/Python syntax, JSON
-npm test        # repository invariants + live ttyd protocol test
+```sh
+npm run check   # prettier, shellcheck, shell/JS/Python syntax, JSON, executable bits
+npm test        # repository invariants plus the live ttyd protocol test
 ```
 
-## What is installed on this machine
+`npm test` needs ttyd. Set `TTYD_BIN` if it is not in `~/.local/bin`; the protocol test skips itself
+when ttyd is missing.
 
-| Path                                   | Managed by                             |
-| -------------------------------------- | -------------------------------------- |
-| `~/.local/bin/ttyd`                    | script (static v1.7.7, no root needed) |
-| `~/.config/systemd/user/ttyd.service`  | script (user unit, enabled)            |
-| `~/.config/pi-remote/Caddyfile`        | script owns one marker block           |
-| `~/.config/authelia/configuration.yml` | script owns one marker block           |
-| `~/.local/share/web-terminal/app`      | script (copy of `app/`)                |
+## Security notes
 
-Backups are written next to a file as `<name>.bak.<epoch>` before the script
-changes it. They pile up across runs; prune them freely.
-
-Services are **user** units to match the rest of `pi-remote` (authelia, caddy,
-pi-remote, searxng). `loginctl enable-linger stravo1` is already set, so they
-survive logout.
-
-## Mobile / PWA
-
-ttyd's own client is desktop-shaped: no Escape, Tab, Ctrl or arrow keys, no
-home-screen install, no safe-area or soft-keyboard handling. So the site serves
-its own frontend (`app/`) that speaks ttyd's WebSocket protocol directly, and
-Caddy proxies only `/token` and `/ws` to ttyd.
-
-The protocol is small and was verified against the running ttyd 1.7.7: binary
-frames, `0` + input, `1` + JSON resize, a JSON init frame with `AuthToken`,
-`columns`, `rows`, and `0` / `1` / `2` for output, window title and preferences
-from the server.
-
-What the frontend gives you:
-
-- **Key bar** above the keyboard: Esc, Tab, sticky Ctrl/Alt, arrows, Home, End,
-  PgUp, PgDn, `|`, `-`, `/`, `~`. Sticky modifiers also apply to the next
-  character typed on the soft keyboard, so Ctrl-C and Esc work in vim or tmux.
-- **Installable**: Android/Chrome → ⋮ _Add to Home screen_; iOS/Safari → Share
-  → _Add to Home Screen_. Runs standalone, no browser chrome.
-- **Keyboard-aware**: `dvh` plus `visualViewport` tracking keeps the key bar
-  above the soft keyboard, with notch-safe insets.
-- **Font size** A−/A+, persisted in `localStorage`.
-- **Touch scrolling** through scrollback, reconnect with backoff on drops, and
-  a Reconnect button.
-- **Offline shell**: the service worker caches the app, so the installed icon
-  still opens when the VM is unreachable, then reports "Connection lost".
-
-Editing the frontend: change `app/`, bump `CACHE_NAME` in `app/sw.js` (the
-service worker caches shell files), then re-run `./setup-web-terminal.sh` to
-copy it to `~/.local/share/web-terminal/app`. `xterm.js` and `addon-fit.js` are
-vendored in `app/vendor/` at 5.5.0 / 0.10.0 — no CDN at runtime.
-
-## Manual checks
-
-```bash
-systemctl --user status ttyd caddy authelia
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:7681/            # 200
-curl -s -o /dev/null -w '%{redirect_url}\n' \
-  --resolve term.sntn.dev:443:127.0.0.1 https://term.sntn.dev/              # → portal
-journalctl --user -u caddy -n 50 | grep term.sntn.dev                      # cert
-```
-
-Unchanged behaviour to expect: every path, including `/app.js`, redirects to
-the portal until you have a session — static assets are gated too. After login
-the page should report an online dot and show the shell. DevTools →
-Application → Manifest confirms installability.
-
-The first request redirects to `auth.sntn.dev`; log in with TOTP and you land
-in a shell as `stravo1`.
-
-### Adding the DNS record on a fresh machine
-
-Caddy cannot issue a certificate until the name resolves:
-
-```
-term.sntn.dev    A    <address of auth.sntn.dev>
-```
-
-Caddy retries on its own every minute, or force it:
-
-```bash
-systemctl --user reload caddy
-```
-
-## Operational notes
-
-- **Full shell as `stravo1`.** Not a sandbox: `~/.ssh`, `~/.pi`, the whole home
-  directory is readable from the browser tab.
-- **Session expiry does not close a terminal.** forward-auth runs once, at the
-  WebSocket handshake. Authelia's `inactivity: 5 minutes` governs new
-  connections, not the ones already open.
-- **One shared tmux session.** Every tab and device attaches to `main`, so a
-  phone and a laptop see the same screen. Use `--max-clients` to cap it.
-- **Certificates renew automatically.** Nothing to do.
-- **Deploy copies drift.** `~/pi-remote/deploy/Caddyfile` and
-  `~/projects/pi-remote/deploy/Caddyfile` differed from the live file before
-  this terminal existed. The live file under `~/.config` is authoritative; the
-  script only touches that one.
-
-## Changelog
-
-2026-10-31 — initial setup on `sntn` (Ubuntu 24.04, user `stravo1`).
-
-1. Installed ttyd 1.7.7 static binary to `~/.local/bin/ttyd`.
-2. Added `~/.config/systemd/user/ttyd.service` — loopback `:7681`, writable,
-   4 clients, `tmux new -A -s main`.
-3. Added `term.sntn.dev` / `two_factor` to `access_control.rules`.
-4. Added the `term.sntn.dev` site block to `~/.config/pi-remote/Caddyfile`
-   (`forward_auth` + `Remote-User` scrubbing, mirroring `pi.sntn.dev`).
-5. Reloaded Caddy, restarted Authelia, confirmed `pi.sntn.dev` unaffected and
-   Let's Encrypt issued `CN=term.sntn.dev` on 2026-10-31 20:17 UTC.
-6. Replaced ttyd's bundled client with the `app/` PWA frontend; Caddy now
-   proxies only `/token` and `/ws` to ttyd and serves the rest from
-   `~/.local/share/web-terminal/app`. Verified assets, MIME types, 404s and a
-   `101 Switching Protocols` upgrade against a scratch Caddy instance.
+- **This is a full shell as the service user**, not a sandbox. Anyone who gets past Authelia can read
+  that user's home directory, including SSH keys.
+- **Forward-auth runs once, at the WebSocket handshake.** Expiring an Authelia session does not close
+  a terminal that is already open. Keep the session lifetime short if that matters.
+- **One OS user for every visitor.** Authelia decides who may enter; every visitor lands as the same
+  account. Per-user shells need a different tool.
+- **Keep ttyd on loopback.** Exposing `WEB_TERMINAL_PORT` directly bypasses Authelia entirely.
+- **`two_factor` needs a registered second factor.** Enrolling before raising the policy avoids a
+  login dead end.
