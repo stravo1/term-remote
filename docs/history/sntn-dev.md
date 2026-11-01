@@ -79,13 +79,15 @@ shows an online dot and a shell. DevTools → Application → Manifest confirms 
 
 **2026-11-01 — fixed the terminal not working on the phone.**
 
-The service worker cached the shell, so the phone paired a stale `index.html`
-with a fresh `app.js`. The script looked up a button the stale page did not
-have, threw before connecting, and left a gray dot and a blank screen. The
-service worker is gone, the shell is served with `Cache-Control: no-cache`, the
-script refuses to start when an element id is missing, and an expired login
-session now says so instead of retrying forever. A repository test pins the
-id contract between `app/index.html` and `app/app.js`.
+Two faults stacked. The service worker paired a stale cached `index.html` with
+a fresh `app.js`, and the fresh script called `applySavedScheme`, which no edit
+of the espresso change ever defined. Either one aborted startup before the
+first token request: a gray dot and a blank screen. The service worker is gone,
+the shell is served with `Cache-Control: no-cache`, the script fails loudly
+when an element id is missing or a name is undefined, and an expired login
+session says so instead of retrying forever. ESLint (`no-undef`) now runs in
+the checks, and a repository test pins the id contract between `app/index.html`
+and `app/app.js`.
 
 ## Known drift
 
