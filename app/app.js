@@ -400,7 +400,7 @@ class TerminalApp {
   }
 
   wireViewport() {
-    applySavedScheme();
+    // The pre-paint script in index.html owns the initial scheme.
     // The token values change under us when the scheme flips; re-read them.
     new MutationObserver(() => this.view.applyTheme()).observe(document.documentElement, {
       attributes: true,

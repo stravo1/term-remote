@@ -7,12 +7,15 @@
   },
   "scripts": {
     "check": "npm run format:check && npm run lint",
-    "lint": "shellcheck setup-term-remote.sh deploy/*.sh && node tools/check-repository.mjs",
+    "lint": "eslint . && shellcheck setup-term-remote.sh deploy/*.sh && node tools/check-repository.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "globals": "^16.5.0",
     "prettier": "3.9.10"
   }
 }
