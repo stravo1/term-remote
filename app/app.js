@@ -6,6 +6,7 @@ const ENDPOINTS = { token: "/token", socket: "/ws" };
 const COMMAND = { input: "0", output: "0", resize: "1", windowTitle: "1" };
 
 const FONT = { min: 9, max: 26, step: 1, initial: 13, storageKey: "term-remote:font-size" };
+const THEME_KEY = "term-remote:theme";
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 10000];
 
 const KEY_SEQUENCES = {
@@ -87,6 +88,37 @@ function applyModifiers(data, armed) {
   return result;
 }
 
+// Maps Espresso tokens to the xterm palette, so the terminal follows the
+// color scheme the page uses. Read at connect time and on theme changes.
+function espressoTerminalTheme() {
+  const token = (name, fallback) => {
+    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  };
+  return {
+    background: token("--surface-base", "#1a1a1a"),
+    foreground: token("--ink-gray-9", "#f8f8f8"),
+    cursor: token("--ink-gray-4", "#aeaeae"),
+    cursorAccent: token("--surface-base", "#1a1a1a"),
+    selectionBackground: `color-mix(in oklab, ${token("--ink-gray-4", "#aeaeae")} 30%, transparent)`,
+  };
+}
+
+function isDarkScheme() {
+  return document.documentElement.dataset.theme !== "light";
+}
+
+function syncSchemeMeta(isDark) {
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#1a1a1a" : "#ffffff");
+  document.querySelector('meta[name="color-scheme"]').setAttribute("content", isDark ? "dark" : "light");
+}
+
+function setScheme(isDark) {
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+  syncSchemeMeta(isDark);
+}
+
 class TerminalSocket {
   constructor(callbacks) {
     this.callbacks = callbacks;
@@ -160,15 +192,10 @@ class TerminalView {
   constructor(element) {
     this.terminal = new Terminal({
       fontSize: loadFontSize(),
-      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      fontFamily: '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
       cursorBlink: true,
       scrollback: 5000,
-      theme: {
-        background: "#0b0f14",
-        foreground: "#e6edf3",
-        cursor: "#7ee787",
-        selectionBackground: "#264f78",
-      },
+      theme: espressoTerminalTheme(),
     });
     this.fitAddon = new FitAddon.FitAddon();
     this.terminal.loadAddon(this.fitAddon);
@@ -208,6 +235,10 @@ class TerminalView {
   setFontSize(size) {
     this.terminal.options.fontSize = size;
     this.fit();
+  }
+
+  applyTheme() {
+    this.terminal.options.theme = espressoTerminalTheme();
   }
 
   onData(handler) {
@@ -348,6 +379,10 @@ class TerminalApp {
   wireControls() {
     document.querySelector("#font-up").addEventListener("click", () => this.changeFontSize(FONT.step));
     document.querySelector("#font-down").addEventListener("click", () => this.changeFontSize(-FONT.step));
+    document.querySelector("#theme-toggle").addEventListener("click", () => {
+      setScheme(!isDarkScheme());
+      this.view.applyTheme();
+    });
     this.retryButton.addEventListener("click", () => this.connect());
     this.view.onData((data) => {
       this.sendInput(applyModifiers(data, this.keyBar.activeModifiers));
@@ -357,6 +392,12 @@ class TerminalApp {
   }
 
   wireViewport() {
+    applySavedScheme();
+    // The token values change under us when the scheme flips; re-read them.
+    new MutationObserver(() => this.view.applyTheme()).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     const applyHeight = () => {
       const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
       document.documentElement.style.setProperty("--app-height", `${height}px`);

@@ -124,6 +124,10 @@ safe-area or soft-keyboard handling. `app/` replaces it with:
 - **Key bar** above the keyboard: Esc, Tab, sticky Ctrl/Alt, arrows, Home, End, PgUp, PgDn, `|`, `-`,
   `/`, `~`. Sticky modifiers also apply to the next character typed on the soft keyboard, so Ctrl-C
   and Esc work in vim or tmux.
+- **Espresso design system**: colors, radii, and focus rings come from frappe-ui's design tokens
+  (`app/vendor/espresso.css`, generated — see below), with Inter for UI text and JetBrains Mono for
+  the terminal. Light and dark schemes both work, with a ◐ toggle; the terminal, the installed
+  app's status bar, and the page all follow the scheme.
 - **Installable**: Android/Chrome → ⋮ _Add to Home screen_; iOS/Safari → Share → _Add to Home
   Screen_. Runs standalone, with no browser chrome.
 - **Keyboard-aware layout**: `dvh` plus `visualViewport` tracking keeps the key bar above the soft
@@ -139,8 +143,10 @@ the server. `tests/protocol.test.mjs` starts a real ttyd and asserts each of tho
 that changes framing fails CI before it reaches the page.
 
 To change the frontend, edit `app/`, bump `CACHE_NAME` in `app/sw.js` (installed clients cache shell
-files), and re-run the provisioner. `xterm.js` and `addon-fit.js` are vendored in `app/vendor/`; the
-page makes no external requests at runtime.
+files), and re-run the provisioner. `xterm.js`, `addon-fit.js`, the Espresso tokens, and the Inter
+and JetBrains Mono fonts are vendored in `app/vendor/`; the page makes no external requests at
+runtime. After a frappe-ui upgrade, refresh the tokens with
+`node tools/generate-espresso.mjs <path-to-frappe-ui>` and bump `CACHE_NAME`.
 
 ## CI/CD
 
@@ -168,6 +174,7 @@ deploy/deploy-key.sh           installs a CI deploy key in authorized_keys
 tests/                         node:test suite, including the ttyd protocol
 tools/check-repository.mjs     syntax and executable-bit checks
 tools/generate-icons.py        regenerates app/icons/*.png without a GUI library
+tools/generate-espresso.mjs    regenerates the vendored Espresso tokens and fonts
 docs/deployment.md             CI, secrets, bootstrap, rollback
 docs/history/                  reference deployment record and the early container variant
 ```

@@ -1,7 +1,7 @@
-# Web terminal
+# term-remote
 
-A browser terminal for a single VM: ttyd on loopback, a mobile-first PWA frontend, Caddy
-forward-auth, and Authelia TOTP. It runs on the same host as pi remote.
+A browser terminal for a single host: ttyd on loopback, a mobile-first PWA frontend in the Espresso
+design system, Caddy forward-auth, and Authelia TOTP.
 
 ## Layout
 
@@ -17,7 +17,11 @@ forward-auth, and Authelia TOTP. It runs on the same host as pi remote.
   one in the Authelia configuration; anything else drifts.
 - Change the host through a template or the provisioner, then run it on the host.
 - Run `npm run check` and `npm test` before a commit.
-- `app/vendor/` is committed on purpose: the page must work with no CDN.
+- `app/vendor/` is committed on purpose: the page must work with no build step and no CDN.
+- Style the UI with the Espresso design tokens from `app/vendor/espresso.css` only. No hardcoded
+  colors anywhere; the page supports light and dark through `[data-theme]`.
+- Regenerate `app/vendor/espresso.css` and the fonts with `node tools/generate-espresso.mjs` after a
+  frappe-ui upgrade; do not edit the generated files.
 - Bump `CACHE_NAME` in `app/sw.js` whenever shell files change, or installed clients keep the old page.
 - Write docs in plain English: short sentences, active voice, no em dashes.
 - Use Conventional Commits: `<type>[optional scope]: <short imperative summary>`.

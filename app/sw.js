@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "term-remote-v1";
+const CACHE_NAME = "term-remote-v2";
 const SHELL = [
   "/",
   "/index.html",
@@ -10,6 +10,10 @@ const SHELL = [
   "/vendor/xterm.js",
   "/vendor/xterm.css",
   "/vendor/addon-fit.js",
+  "/vendor/espresso.css",
+  "/vendor/fonts.css",
+  "/vendor/fonts/Inter.var.woff2",
+  "/vendor/fonts/jetbrains-mono-latin.var.woff2",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/icon-maskable-512.png",

@@ -1,12 +1,11 @@
+/* Espresso design system, via the generated frappe-ui tokens. Colors, radii
+ * and focus rings come from app/vendor/espresso.css; nothing here hardcodes a
+ * color, so light and dark themes both work. */
+
 :root {
+  --font-ui: "InterVar", ui-sans-serif, system-ui, sans-serif;
+  --font-terminal: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
   --app-height: 100dvh;
-  --background: #0b0f14;
-  --surface: #11161d;
-  --border: #1f262f;
-  --foreground: #e6edf3;
-  --muted: #8b949e;
-  --accent: #7ee787;
-  --danger: #f85149;
 }
 
 * {
@@ -17,11 +16,16 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--surface-base);
+  color: var(--ink-gray-8);
   overscroll-behavior: none;
   -webkit-text-size-adjust: 100%;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-ui);
+}
+
+:where(button, [tabindex]):focus-visible {
+  outline: var(--focus-outline-default);
+  outline-offset: 0px;
 }
 
 .app {
@@ -36,10 +40,10 @@ body {
   flex: none;
   align-items: center;
   gap: 0.5rem;
-  height: 2.5rem;
+  height: 2.75rem;
   padding: 0 0.5rem 0 0.75rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface-gray-1);
+  border-bottom: 1px solid var(--outline-gray-2);
   font-size: 0.8rem;
 }
 
@@ -47,16 +51,16 @@ body {
   flex: none;
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 50%;
-  background: var(--muted);
+  border-radius: var(--radius-9);
+  background: var(--ink-gray-4);
 }
 
 .status[data-state="online"] {
-  background: var(--accent);
+  background: var(--green-600);
 }
 
 .status[data-state="offline"] {
-  background: var(--danger);
+  background: var(--red-600);
 }
 
 .title {
@@ -64,7 +68,8 @@ body {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: var(--muted);
+  color: var(--ink-gray-6);
+  font-weight: 450;
 }
 
 .actions {
@@ -74,19 +79,27 @@ body {
 
 .action {
   appearance: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--foreground);
+  border: 1px solid var(--outline-gray-2);
+  border-radius: var(--radius-3);
+  background: var(--surface-gray-2);
+  color: var(--ink-gray-7);
   padding: 0.25rem 0.55rem;
   font: inherit;
+  font-weight: 500;
   touch-action: manipulation;
+  transition: background-color 150ms;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .action:hover {
+    background: var(--surface-gray-3);
+  }
 }
 
 .action.primary {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #06120a;
+  border-color: transparent;
+  background: var(--ink-gray-9);
+  color: var(--surface-base);
   font-weight: 600;
   padding: 0.5rem 1.1rem;
 }
@@ -96,6 +109,7 @@ body {
   min-height: 0;
   overflow: hidden;
   padding: 0.25rem 0 0 0.35rem;
+  background: var(--surface-base);
 }
 
 #terminal {
@@ -109,8 +123,8 @@ body {
   gap: 0.25rem;
   overflow-x: auto;
   padding: 0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom));
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+  background: var(--surface-gray-1);
+  border-top: 1px solid var(--outline-gray-2);
   scrollbar-width: none;
 }
 
@@ -123,23 +137,36 @@ body {
   flex: none;
   min-width: 2.9rem;
   height: 2.5rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: #161b22;
-  color: var(--foreground);
+  border: 1px solid var(--outline-gray-2);
+  border-radius: var(--radius-4);
+  background: var(--surface-gray-2);
+  color: var(--ink-gray-8);
   font: inherit;
   font-size: 0.85rem;
+  font-weight: 450;
   touch-action: manipulation;
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .key:hover {
+    background: var(--surface-gray-3);
+  }
 }
 
 .key:active {
-  background: #222a35;
+  background: var(--surface-gray-3);
 }
 
+/* An armed modifier is the Espresso solid button: high-contrast fill, ink
+ * flipped to the surface color. */
 .key.modifier.active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #06120a;
+  border-color: var(--ink-gray-9);
+  background: var(--ink-gray-9);
+  color: var(--surface-base);
+  font-weight: 600;
 }
 
 .overlay {
@@ -151,7 +178,7 @@ body {
   justify-content: center;
   gap: 1rem;
   padding: 2rem;
-  background: rgb(11 15 20 / 0.85);
+  background: color-mix(in oklab, var(--surface-base) 85%, transparent);
   text-align: center;
 }
 
@@ -161,5 +188,5 @@ body {
 
 .overlay-text {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-gray-6);
 }
