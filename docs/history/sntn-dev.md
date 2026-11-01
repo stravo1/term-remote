@@ -23,10 +23,10 @@ user services with `loginctl enable-linger` set, and the live configurations wer
 
 | Path                      | Role                                              |
 | ------------------------- | ------------------------------------------------- |
-| `~/projects/web-terminal` | development clone, where changes are made          |
-| `~/web-terminal`          | deploy target, rsynced by CI on every push         |
+| `~/projects/term-remote` | development clone, where changes are made          |
+| `~/term-remote`          | deploy target, rsynced by CI on every push         |
 
-Never edit `~/web-terminal` by hand. The next deploy overwrites it.
+Never edit `~/term-remote` by hand. The next deploy overwrites it.
 
 ## DNS
 
@@ -60,11 +60,22 @@ shows an online dot and a shell. DevTools → Application → Manifest confirms 
 5. Reloaded Caddy, restarted Authelia, confirmed `pi.sntn.dev` was unaffected, and confirmed
    Let's Encrypt issued the certificate.
 6. Replaced ttyd's bundled client with the `app/` PWA frontend. Caddy now proxies only `/token` and
-   `/ws` to ttyd and serves the rest from `~/.local/share/web-terminal/app`. Assets, MIME types, 404s
+   `/ws` to ttyd and serves the rest from `~/.local/share/term-remote/app`. Assets, MIME types, 404s
    and a `101 Switching Protocols` upgrade were verified against a scratch Caddy instance.
 7. Moved everything into this repository and deployed it from GitHub Actions through a
    forced-command deploy key. `deploy/deploy-key.sh` only replaces the entry for its own checkout, so
    the pi remote deploy key keeps working.
+
+**2026-11-01 — renamed to term-remote, made the defaults generic.**
+
+1. Renamed the repository, the script, the marker blocks, the frontend cache and the
+   install directory from `web-terminal` to `term-remote`.
+2. Moved the host's real hostnames and Caddy path out of the script into the untracked
+   `~/.config/term-remote/env`. The script now defaults to placeholders and refuses to
+   run against them.
+3. The provisioner still strips the old `web-terminal` marker blocks, so the live
+   Caddyfile and Authelia configuration migrated on the first deploy instead of ending
+   up with two site blocks.
 
 ## Known drift
 

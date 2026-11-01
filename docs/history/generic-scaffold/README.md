@@ -3,7 +3,7 @@
 > Reference only. This is the container/root variant written before the live
 > `term.sntn.dev` setup. What actually runs on this VM is documented in
 > [`../../README.md`](../../README.md) and provisioned by
-> [`../../setup-web-terminal.sh`](../../setup-web-terminal.sh).
+> [`../../setup-term-remote.sh`](../../setup-term-remote.sh).
 
 Browser terminal for a VM, gated by Authelia SSO through Caddy forward-auth.
 

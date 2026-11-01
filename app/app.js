@@ -5,7 +5,7 @@
 const ENDPOINTS = { token: "/token", socket: "/ws" };
 const COMMAND = { input: "0", output: "0", resize: "1", windowTitle: "1" };
 
-const FONT = { min: 9, max: 26, step: 1, initial: 13, storageKey: "web-terminal:font-size" };
+const FONT = { min: 9, max: 26, step: 1, initial: 13, storageKey: "term-remote:font-size" };
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 10000];
 
 const KEY_SEQUENCES = {

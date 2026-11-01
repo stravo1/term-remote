@@ -7,7 +7,7 @@ forward-auth, and Authelia TOTP. It runs on the same host as pi remote.
 
 - `app/` is the PWA frontend. It speaks ttyd's WebSocket protocol itself, so ttyd is only a pty backend.
 - `templates/` holds the three files the provisioner renders.
-- `setup-web-terminal.sh` is the only thing that changes the host. It is idempotent.
+- `setup-term-remote.sh` is the only thing that changes the host. It is idempotent.
 - `deploy/` holds the CI receiver and the deploy-key helper.
 - `docs/deployment.md` describes CI, secrets, and the host bootstrap.
 

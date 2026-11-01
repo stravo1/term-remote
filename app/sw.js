@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "web-terminal-v1";
+const CACHE_NAME = "term-remote-v1";
 const SHELL = [
   "/",
   "/index.html",

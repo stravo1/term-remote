@@ -1,4 +1,4 @@
-# managed-by: setup-web-terminal.sh
+# managed-by: setup-term-remote.sh
 [Unit]
 Description=ttyd web terminal
 Documentation=https://github.com/tsl0922/ttyd

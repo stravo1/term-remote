@@ -55,5 +55,5 @@ jobs:
         env:
           TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
         run: |
-          tar -c app templates tools deploy setup-web-terminal.sh ttyd.version README.md LICENSE \
+          tar -c app templates tools deploy setup-term-remote.sh ttyd.version README.md LICENSE \
             | ssh -T "$TARGET"

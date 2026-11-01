@@ -1,4 +1,4 @@
-# Web terminal
+# term-remote
 
 A browser terminal for one Linux host. **ttyd** provides the pty, a small mobile-first **PWA**
 provides the UI, **Caddy** gates everything with forward-auth, and **Authelia** authenticates with
@@ -16,7 +16,7 @@ browser ──TLS──> Caddy ──forward_auth──> Authelia
   pty is unreachable unless the proxy forwards to it.
 - The frontend in `app/` speaks ttyd's WebSocket protocol directly, so ttyd is reduced to a pty
   backend: Caddy proxies only `/token` and `/ws` to it and serves the rest as static files.
-- `setup-web-terminal.sh` is the only thing that changes the host. It owns exactly one
+- `setup-term-remote.sh` is the only thing that changes the host. It owns exactly one
   marker-delimited block in the Caddyfile and one in the Authelia configuration, and nothing else.
 
 ## Requirements
@@ -34,18 +34,21 @@ browser ──TLS──> Caddy ──forward_auth──> Authelia
 ## Quick start
 
 ```sh
-git clone <this repository> ~/web-terminal
-cd ~/web-terminal
-WEB_TERMINAL_DOMAIN=term.example.com \
-AUTHELIA_PORTAL_DOMAIN=auth.example.com \
-./setup-web-terminal.sh
+git clone <this repository> ~/term-remote
+cd ~/term-remote
+
+mkdir -p ~/.config/term-remote
+cp env.example ~/.config/term-remote/env
+$EDITOR ~/.config/term-remote/env        # real hostnames, and the Caddy path
+
+./setup-term-remote.sh
 ```
 
 The script then:
 
 1. Installs the pinned ttyd release into `~/.local/bin` if it is missing.
 2. Renders and enables a user unit that runs `ttyd … tmux new -A -s main` on loopback.
-3. Copies `app/` to `~/.local/share/web-terminal/app`.
+3. Copies `app/` to `~/.local/share/term-remote/app`.
 4. Adds one Authelia access-control rule and one Caddy site block inside its own markers.
 5. Restarts only the services whose files changed, then verifies that ttyd answers, that Authelia
    gates the domain, that Caddy serves it, and that the frontend is deployed.
@@ -58,32 +61,46 @@ It refuses to guess. If either config already contains an unmanaged rule or site
 domain, it stops and tells you to remove that first, rather than creating a duplicate.
 
 `--force` overwrites a `ttyd.service` unit that the script does not consider its own. Other flags are
-documented in `./setup-web-terminal.sh --help`.
+documented in `./setup-term-remote.sh --help`.
 
 After the first run, create the DNS record if you have not already. Caddy retries certificates on its
 own, or force it with `systemctl --user reload caddy`.
 
 ## Configuration
 
-Every value below can be set in the environment. The defaults are defined at the top of
-`setup-web-terminal.sh`; `TTYD_VERSION` defaults to the contents of `ttyd.version`.
+Settings live in `~/.config/term-remote/env`, one `KEY=VALUE` per line with no quotes. Copy
+`env.example` to get started. The file is not in git, so a checkout carries no hostnames.
 
-| Variable                    | Purpose                                                               |
-| --------------------------- | --------------------------------------------------------------------- |
-| `WEB_TERMINAL_DOMAIN`       | public hostname of the terminal                                       |
-| `AUTHELIA_PORTAL_DOMAIN`    | hostname of the Authelia portal, used by the cert-failure message     |
-| `AUTHELIA_POLICY`           | access-control policy for the terminal site, for example `two_factor` |
-| `WEB_TERMINAL_PORT`         | loopback port for ttyd                                                |
-| `WEB_TERMINAL_MAX_CLIENTS`  | concurrent browser clients ttyd accepts                               |
-| `WEB_TERMINAL_TMUX_SESSION` | tmux session every client attaches to                                 |
-| `TTYD_VERSION`              | override the pinned ttyd release                                      |
-| `CADDY_CONFIG`              | path to the Caddyfile                                                 |
-| `AUTHELIA_CONFIG`           | path to the Authelia configuration                                    |
-| `AUTHELIA_PORT`             | Authelia listen port, used for forward-auth and health checks         |
-| `CADDY_ADMIN`               | Caddy admin API, used to confirm the site is live                     |
-| `APP_ROOT`                  | where the frontend is installed                                       |
-| `CADDY_BINARY`              | caddy executable, otherwise resolved from `PATH`                      |
-| `AUTHELIA_BINARY`           | authelia executable, otherwise resolved from `PATH`                   |
+```sh
+TERM_REMOTE_DOMAIN=term.example.com
+AUTHELIA_PORTAL_DOMAIN=auth.example.com
+AUTHELIA_POLICY=two_factor
+CADDY_CONFIG=/home/you/.config/caddy/Caddyfile
+```
+
+The shell environment wins over the file, and the file wins over the built-in defaults. The defaults
+are placeholders (`term.example.com`, `auth.example.com`) and the script **refuses to run** while a
+hostname is still a placeholder, so a half-configured host cannot quietly rewrite its proxy config.
+
+Every value below can be set in the environment. The defaults are defined at the top of
+`setup-term-remote.sh`; `TTYD_VERSION` defaults to the contents of `ttyd.version`.
+
+| Variable                   | Purpose                                                               |
+| -------------------------- | --------------------------------------------------------------------- |
+| `TERM_REMOTE_DOMAIN`       | public hostname of the terminal                                       |
+| `AUTHELIA_PORTAL_DOMAIN`   | hostname of the Authelia portal, used by the cert-failure message     |
+| `AUTHELIA_POLICY`          | access-control policy for the terminal site, for example `two_factor` |
+| `TERM_REMOTE_PORT`         | loopback port for ttyd                                                |
+| `TERM_REMOTE_MAX_CLIENTS`  | concurrent browser clients ttyd accepts                               |
+| `TERM_REMOTE_TMUX_SESSION` | tmux session every client attaches to                                 |
+| `TTYD_VERSION`             | override the pinned ttyd release                                      |
+| `CADDY_CONFIG`             | path to the Caddyfile                                                 |
+| `AUTHELIA_CONFIG`          | path to the Authelia configuration                                    |
+| `AUTHELIA_PORT`            | Authelia listen port, used for forward-auth and health checks         |
+| `CADDY_ADMIN`              | Caddy admin API, used to confirm the site is live                     |
+| `APP_ROOT`                 | where the frontend is installed                                       |
+| `CADDY_BINARY`             | caddy executable, otherwise resolved from `PATH`                      |
+| `AUTHELIA_BINARY`          | authelia executable, otherwise resolved from `PATH`                   |
 
 ## What the provisioner owns
 
@@ -143,8 +160,9 @@ protocol test, and the provisioner reads it on the host.
 ```
 app/                           PWA frontend (HTML, CSS, JS, icons, vendor)
 templates/                     the three files the provisioner renders
-setup-web-terminal.sh          provisioner: installs, patches, restarts, verifies
+setup-term-remote.sh          provisioner: installs, patches, restarts, verifies
 ttyd.version                   the pinned ttyd release
+env.example                    template for ~/.config/term-remote/env
 deploy/receive.sh              forced command CI runs on the host
 deploy/deploy-key.sh           installs a CI deploy key in authorized_keys
 tests/                         node:test suite, including the ttyd protocol
@@ -172,6 +190,6 @@ when ttyd is missing.
   a terminal that is already open. Keep the session lifetime short if that matters.
 - **One OS user for every visitor.** Authelia decides who may enter; every visitor lands as the same
   account. Per-user shells need a different tool.
-- **Keep ttyd on loopback.** Exposing `WEB_TERMINAL_PORT` directly bypasses Authelia entirely.
+- **Keep ttyd on loopback.** Exposing `TERM_REMOTE_PORT` directly bypasses Authelia entirely.
 - **`two_factor` needs a registered second factor.** Enrolling before raising the policy avoids a
   login dead end.

@@ -1,7 +1,7 @@
 # Deployment
 
-The host runs a checkout at `~/web-terminal` and CI deploys into it. There is no
-build step: the frontend is plain files and `setup-web-terminal.sh` is the deploy
+The host runs a checkout at `~/term-remote` and CI deploys into it. There is no
+build step: the frontend is plain files and `setup-term-remote.sh` is the deploy
 script. A push to `main` changes the live site once the tests pass.
 
 ## Flow
@@ -21,6 +21,19 @@ script. A push to `main` changes the live site once the tests pass.
 6. `receive.sh` replaces itself last, by rename, so the next push runs the newer
    version.
 
+## Host settings
+
+The host keeps its real hostnames in `~/.config/term-remote/env`, which is not in
+git. The provisioner reads it on every deploy, and refuses to run while a hostname
+is still the `example.com` placeholder. So a missing or half-written settings file
+fails the deploy instead of repointing the proxy at a placeholder domain.
+
+```sh
+mkdir -p ~/.config/term-remote
+cp env.example ~/.config/term-remote/env
+$EDITOR ~/.config/term-remote/env
+```
+
 ## Secrets
 
 They live on the `production` environment, not at repository level:
@@ -35,35 +48,35 @@ They live on the `production` environment, not at repository level:
 ## One-time host bootstrap
 
 ```sh
-gh repo clone <owner>/web-terminal ~/web-terminal
-ssh-keygen -t ed25519 -N "" -C web-terminal-ci -f /tmp/web-terminal-ci
-bash ~/web-terminal/deploy/deploy-key.sh /tmp/web-terminal-ci.pub
+gh repo clone <owner>/term-remote ~/term-remote
+ssh-keygen -t ed25519 -N "" -C term-remote-ci -f /tmp/term-remote-ci
+bash ~/term-remote/deploy/deploy-key.sh /tmp/term-remote-ci.pub
 
-gh secret set DEPLOY_SSH_KEY --env production < /tmp/web-terminal-ci
+gh secret set DEPLOY_SSH_KEY --env production < /tmp/term-remote-ci
 ssh-keyscan -p 22 <host> | gh secret set DEPLOY_KNOWN_HOSTS --env production
 printf '%s' "$USER" | gh secret set DEPLOY_USER --env production
 printf '%s' <host> | gh secret set DEPLOY_HOST --env production
 
-shred -u /tmp/web-terminal-ci && rm -f /tmp/web-terminal-ci.pub
+shred -u /tmp/term-remote-ci && rm -f /tmp/term-remote-ci.pub
 ```
 
 `deploy-key.sh` removes only entries for its own checkout, so deploy keys for other checkouts
 keep working. To revoke CI deploys, delete the line containing
-`command="…/web-terminal/deploy/receive.sh"` from `~/.ssh/authorized_keys`.
+`command="…/term-remote/deploy/receive.sh"` from `~/.ssh/authorized_keys`.
 
 ## Manual deploy
 
 From the checkout on the host:
 
 ```sh
-cd ~/web-terminal && ./setup-web-terminal.sh
+cd ~/term-remote && ./setup-term-remote.sh
 ```
 
 To exercise the exact CI path without GitHub:
 
 ```sh
-cd ~/web-terminal
-tar -c app templates tools deploy setup-web-terminal.sh ttyd.version README.md LICENSE \
+cd ~/term-remote
+tar -c app templates tools deploy setup-term-remote.sh ttyd.version README.md LICENSE \
   | ./deploy/receive.sh
 ```
 
@@ -74,7 +87,7 @@ by hand does not survive, because every deploy rsyncs over it.
 
 ## Changing the domain, port or ttyd version
 
-- Domain and port are defaults in `setup-web-terminal.sh`; override them with
+- Domain and port are defaults in `setup-term-remote.sh`; override them with
   environment variables or change the defaults.
 - A new domain needs its DNS record. The provisioner adds the Authelia rule and
   the Caddy block itself.

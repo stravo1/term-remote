@@ -1,4 +1,4 @@
-# >>> web-terminal @DOMAIN@ (managed by setup-web-terminal.sh)
+# >>> term-remote @DOMAIN@ (managed by setup-term-remote.sh)
 @DOMAIN@ {
 	route {
 		request_header -Remote-User
@@ -16,4 +16,4 @@
 		file_server
 	}
 }
-# <<< web-terminal
+# <<< term-remote

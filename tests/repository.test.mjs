@@ -63,7 +63,7 @@ test("service worker precaches only files that exist", () => {
 });
 
 test("every template placeholder is substituted by the provisioner", () => {
-  const provisioner = read("setup-web-terminal.sh");
+  const provisioner = read("setup-term-remote.sh");
 
   for (const template of readdirSync(join(ROOT, "templates"))) {
     const source = readFileSync(join(ROOT, "templates", template), "utf8");
@@ -96,11 +96,35 @@ test("every key bar button has a key sequence", () => {
   }
 });
 
+test("the provisioner ships no host-specific defaults", () => {
+  const provisioner = read("setup-term-remote.sh");
+
+  assert.match(provisioner, /TERM_REMOTE_DOMAIN:-term\.example\.com/);
+  assert.match(provisioner, /AUTHELIA_PORTAL_DOMAIN:-auth\.example\.com/);
+  assert.match(provisioner, /require_settings/, "placeholder hostnames must be refused");
+  assert.match(provisioner, /load_host_settings/, "the host settings file must be read");
+  const isGeneric = (domain) => domain === "github.com" || domain.endsWith("example.com");
+  const domains = [...provisioner.matchAll(/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|dev|net|org|io)\b/g)].map(
+    (match) => match[0],
+  );
+  for (const domain of domains) {
+    assert.ok(isGeneric(domain), `unexpected hardcoded hostname in the provisioner: ${domain}`);
+  }
+  assert.ok(existsSync(join(ROOT, "env.example")), "env.example documents the settings file");
+});
+
+test("the provisioner migrates blocks written under the old project name", () => {
+  const provisioner = read("setup-term-remote.sh");
+
+  assert.match(provisioner, /LEGACY_MARKER_START/);
+  assert.match(provisioner, /LEGACY_UNIT_MARKER/);
+});
+
 test("the ttyd version has a single owner", () => {
   const version = read("ttyd.version").trim();
   assert.match(version, /^\d+\.\d+\.\d+$/, `unexpected pinned version: ${version}`);
 
-  const provisioner = read("setup-web-terminal.sh");
+  const provisioner = read("setup-term-remote.sh");
   assert.ok(provisioner.includes("ttyd.version"), "the provisioner should read ttyd.version");
   assert.doesNotMatch(provisioner, /TTYD_VERSION:-\d/, "the provisioner must not hardcode a ttyd version");
   assert.ok(read("deploy/receive.sh").includes("ttyd.version"), "the deploy receiver should ship ttyd.version");

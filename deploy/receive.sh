@@ -22,15 +22,17 @@ staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 
 tar -x --no-same-owner -C "$staging"
-if [ ! -f "$staging/app/index.html" ] || [ ! -f "$staging/setup-web-terminal.sh" ]; then
-  echo "Incomplete release: app/index.html and setup-web-terminal.sh are required." >&2
+if [ ! -f "$staging/app/index.html" ] || [ ! -f "$staging/setup-term-remote.sh" ]; then
+  echo "Incomplete release: app/index.html and setup-term-remote.sh are required." >&2
   exit 1
 fi
 
 rsync -a --delete "$staging/app/" "$directory/app/"
 rsync -a --delete "$staging/templates/" "$directory/templates/"
 rsync -a --delete "$staging/tools/" "$directory/tools/"
-install -m 755 "$staging/setup-web-terminal.sh" "$directory/setup-web-terminal.sh"
+install -m 755 "$staging/setup-term-remote.sh" "$directory/setup-term-remote.sh"
+# A checkout deployed before the rename keeps the old script name.
+rm -f "$directory/setup-web-terminal.sh"
 cp "$staging/ttyd.version" "$directory/ttyd.version"
 cp "$staging/README.md" "$staging/LICENSE" "$directory/"
 
@@ -42,7 +44,7 @@ if [ -d "$staging/deploy" ]; then
 fi
 
 cd "$directory"
-./setup-web-terminal.sh
+./setup-term-remote.sh
 
 if [ -f "$staging/deploy/receive.sh" ] && ! cmp -s "$staging/deploy/receive.sh" "$directory/deploy/receive.sh"; then
   install -m 755 "$staging/deploy/receive.sh" "$directory/deploy/receive.sh.new"

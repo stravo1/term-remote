@@ -1,4 +1,4 @@
-    # >>> web-terminal @DOMAIN@ (managed by setup-web-terminal.sh)
+    # >>> term-remote @DOMAIN@ (managed by setup-term-remote.sh)
     - domain: '@DOMAIN@'
       policy: '@POLICY@'
-    # <<< web-terminal
+    # <<< term-remote

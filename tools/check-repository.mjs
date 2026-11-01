@@ -6,7 +6,7 @@ import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
-const SHELL_SCRIPTS = ["setup-web-terminal.sh", "deploy/receive.sh", "deploy/deploy-key.sh"];
+const SHELL_SCRIPTS = ["setup-term-remote.sh", "deploy/receive.sh", "deploy/deploy-key.sh"];
 const JAVASCRIPT = ["app/app.js", "app/sw.js"];
 const PYTHON = ["tools/generate-icons.py"];
 const JSON_FILES = ["package.json", "app/manifest.webmanifest"];
@@ -56,8 +56,8 @@ for (const file of JSON_FILES) {
   check(`json parse ${file}`, () => JSON.parse(readFileSync(path(file), "utf8")));
 }
 
-check("setup-web-terminal.sh sets -euo pipefail", () => {
-  const source = readFileSync(path("setup-web-terminal.sh"), "utf8");
+check("setup-term-remote.sh sets -euo pipefail", () => {
+  const source = readFileSync(path("setup-term-remote.sh"), "utf8");
   if (!source.includes("set -euo pipefail")) {
     throw new Error("missing set -euo pipefail");
   }

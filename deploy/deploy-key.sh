@@ -39,7 +39,7 @@ grep -vF "command=\"$key_command\"" "$HOME/.ssh/authorized_keys" >"$HOME/.ssh/au
 install -m 600 "$HOME/.ssh/authorized_keys.next" "$HOME/.ssh/authorized_keys"
 rm -f "$HOME/.ssh/authorized_keys.next"
 
-printf 'restrict,command="%s" %s web-terminal-ci\n' "$key_command" "$pubkey" \
+printf 'restrict,command="%s" %s term-remote-ci\n' "$key_command" "$pubkey" \
   >>"$HOME/.ssh/authorized_keys"
 
 echo "Deploy key installed. CI deploys now install into $directory."

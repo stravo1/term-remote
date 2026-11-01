@@ -2,27 +2,35 @@
 #
 # Provision the browser terminal: ttyd behind Caddy forward-auth + Authelia.
 #
-# Everything this script owns is wrapped in "managed by setup-web-terminal.sh"
+# Host settings come from the settings file, from the environment, or from the
+# defaults below. The defaults are placeholders and the script refuses to run
+# against them, so a real host always sets values, usually through the file.
+#
+# Everything this script owns is wrapped in "managed by setup-term-remote.sh"
 # markers, so re-running it replaces those blocks and leaves the rest alone.
 #
-# Usage: ./setup-web-terminal.sh [--force]
+# Usage: ./setup-term-remote.sh [--force]
 #
 #   --force   rewrite the ttyd unit even if it is not script-managed
 #
-# Environment overrides:
-#   WEB_TERMINAL_DOMAIN        public hostname              (term.sntn.dev)
-#   AUTHELIA_PORTAL_DOMAIN     portal hostname              (auth.sntn.dev)
-#   AUTHELIA_POLICY            access control policy        (two_factor)
-#   WEB_TERMINAL_PORT          ttyd loopback port           (7681)
-#   WEB_TERMINAL_MAX_CLIENTS   concurrent clients           (4)
-#   WEB_TERMINAL_TMUX_SESSION  tmux session name            (main)
-#   TTYD_VERSION               ttyd release tag             (1.7.7)
-#   CADDY_CONFIG               Caddyfile path               (~/.config/pi-remote/Caddyfile)
-#   AUTHELIA_CONFIG            Authelia configuration path  (~/.config/authelia/configuration.yml)
-#   AUTHELIA_PORT              Authelia listen port         (9091)
-#   CADDY_ADMIN                Caddy admin API              (http://127.0.0.1:2019)
-#   CADDY_BINARY               caddy executable             (resolved from PATH)
-#   AUTHELIA_BINARY            authelia executable          (resolved from PATH)
+# Settings file: ~/.config/term-remote/env, one KEY=VALUE per line, no quotes.
+# The environment wins over the file, and the file wins over the defaults.
+#
+#   TERM_REMOTE_DOMAIN         public hostname                 (term.example.com)
+#   AUTHELIA_PORTAL_DOMAIN     portal hostname                 (auth.example.com)
+#   AUTHELIA_POLICY            access control policy           (two_factor)
+#   TERM_REMOTE_PORT           ttyd loopback port              (7681)
+#   TERM_REMOTE_MAX_CLIENTS    concurrent clients              (4)
+#   TERM_REMOTE_TMUX_SESSION   tmux session clients attach to  (main)
+#   TTYD_VERSION               ttyd release tag                (ttyd.version)
+#   CADDY_CONFIG               Caddyfile path                  (~/.config/caddy/Caddyfile)
+#   AUTHELIA_CONFIG            Authelia configuration path     (~/.config/authelia/configuration.yml)
+#   AUTHELIA_PORT              Authelia listen port            (9091)
+#   CADDY_ADMIN                Caddy admin API                 (http://127.0.0.1:2019)
+#   APP_ROOT                   frontend install directory      (~/.local/share/term-remote/app)
+#   TERM_REMOTE_ENV            alternative settings file path
+#   CADDY_BINARY               caddy executable                (resolved from PATH)
+#   AUTHELIA_BINARY            authelia executable             (resolved from PATH)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,22 +40,48 @@ readonly APP_SOURCE="${SCRIPT_DIR}/app"
 readonly BIN_DIR="${HOME}/.local/bin"
 readonly UNIT_DIR="${HOME}/.config/systemd/user"
 readonly UNIT_PATH="${UNIT_DIR}/ttyd.service"
-readonly UNIT_MARKER="managed-by: setup-web-terminal.sh"
-readonly MARKER_START="# >>> web-terminal"
-readonly MARKER_STOP="# <<< web-terminal"
+readonly UNIT_MARKER="managed-by: setup-term-remote.sh"
+readonly LEGACY_UNIT_MARKER="managed-by: setup-web-terminal.sh"
+readonly HOST_ENV_FILE="${TERM_REMOTE_ENV:-${XDG_CONFIG_HOME:-${HOME}/.config}/term-remote/env}"
+readonly MARKER_START="# >>> term-remote"
+readonly MARKER_STOP="# <<< term-remote"
+# Blocks written before the rename are still stripped, so older hosts migrate.
+readonly LEGACY_MARKER_START="# >>> web-terminal"
+readonly LEGACY_MARKER_STOP="# <<< web-terminal"
 
-DOMAIN="${WEB_TERMINAL_DOMAIN:-term.sntn.dev}"
-PORTAL_DOMAIN="${AUTHELIA_PORTAL_DOMAIN:-auth.sntn.dev}"
+log() { printf '[term-remote] %s\n' "$*"; }
+fail() {
+	printf '[term-remote] error: %s\n' "$*" >&2
+	exit 1
+}
+
+# One KEY=VALUE per line, no quotes. Values already set in the environment win.
+load_host_settings() {
+	local line name
+	[[ -f $HOST_ENV_FILE ]] || return 0
+	while IFS= read -r line || [[ -n $line ]]; do
+		[[ $line =~ ^[[:space:]]*(#|$) ]] && continue
+		name="${line%%=*}"
+		[[ $name =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
+		[[ -n ${!name+set} ]] && continue
+		export "${line?}"
+	done <"$HOST_ENV_FILE"
+}
+
+load_host_settings
+
+DOMAIN="${TERM_REMOTE_DOMAIN:-term.example.com}"
+PORTAL_DOMAIN="${AUTHELIA_PORTAL_DOMAIN:-auth.example.com}"
 POLICY="${AUTHELIA_POLICY:-two_factor}"
-PORT="${WEB_TERMINAL_PORT:-7681}"
-MAX_CLIENTS="${WEB_TERMINAL_MAX_CLIENTS:-4}"
-TMUX_SESSION="${WEB_TERMINAL_TMUX_SESSION:-main}"
+PORT="${TERM_REMOTE_PORT:-7681}"
+MAX_CLIENTS="${TERM_REMOTE_MAX_CLIENTS:-4}"
+TMUX_SESSION="${TERM_REMOTE_TMUX_SESSION:-main}"
 TTYD_VERSION="${TTYD_VERSION:-$(<"${SCRIPT_DIR}/ttyd.version")}"
-CADDY_CONFIG="${CADDY_CONFIG:-${HOME}/.config/pi-remote/Caddyfile}"
+CADDY_CONFIG="${CADDY_CONFIG:-${HOME}/.config/caddy/Caddyfile}"
 AUTHELIA_CONFIG="${AUTHELIA_CONFIG:-${HOME}/.config/authelia/configuration.yml}"
 AUTHELIA_PORT="${AUTHELIA_PORT:-9091}"
 CADDY_ADMIN="${CADDY_ADMIN:-http://127.0.0.1:2019}"
-APP_ROOT="${APP_ROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/web-terminal/app}"
+APP_ROOT="${APP_ROOT:-${XDG_DATA_HOME:-${HOME}/.local/share}/term-remote/app}"
 CADDY_BINARY="${CADDY_BINARY:-}"
 AUTHELIA_BINARY="${AUTHELIA_BINARY:-}"
 
@@ -59,14 +93,8 @@ CADDY_CHANGED=0
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-log() { printf '[web-terminal] %s\n' "$*"; }
-fail() {
-	printf '[web-terminal] error: %s\n' "$*" >&2
-	exit 1
-}
-
 usage() {
-	sed -n '3,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+	awk 'NR == 1 { next } /^set -euo/ { exit } { sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"
 }
 
 parse_arguments() {
@@ -81,6 +109,23 @@ parse_arguments() {
 		esac
 		shift
 	done
+}
+
+is_placeholder_domain() {
+	[[ $1 == example.com || $1 == *.example.com ]]
+}
+
+require_settings() {
+	local missing=""
+	if is_placeholder_domain "$DOMAIN"; then
+		missing="TERM_REMOTE_DOMAIN"
+	fi
+	if is_placeholder_domain "$PORTAL_DOMAIN"; then
+		missing="${missing:+${missing} and }AUTHELIA_PORTAL_DOMAIN"
+	fi
+	if [[ -n $missing ]]; then
+		fail "no real hostname configured; set ${missing} or write settings to ${HOST_ENV_FILE}"
+	fi
 }
 
 resolve_binary() {
@@ -174,7 +219,7 @@ install_unit() {
 		log "unit unchanged: ${UNIT_PATH}"
 		return
 	fi
-	if [[ -f $UNIT_PATH ]] && ! grep -qF "$UNIT_MARKER" "$UNIT_PATH" && ((FORCE == 0)); then
+	if [[ -f $UNIT_PATH ]] && ! grep -qE "${UNIT_MARKER}|${LEGACY_UNIT_MARKER}" "$UNIT_PATH" && ((FORCE == 0)); then
 		fail "${UNIT_PATH} exists but is not managed by this script; re-run with --force"
 	fi
 
@@ -201,9 +246,11 @@ install_app() {
 
 strip_marker_block() {
 	local source=$1 destination=$2
-	awk -v start="$MARKER_START" -v stop="$MARKER_STOP" '
-		index($0, start) { skipping = 1; next }
-		index($0, stop)  { skipping = 0; next }
+	awk \
+		-v start="$MARKER_START" -v stop="$MARKER_STOP" \
+		-v legacy_start="$LEGACY_MARKER_START" -v legacy_stop="$LEGACY_MARKER_STOP" '
+		index($0, start) || index($0, legacy_start) { skipping = 1; next }
+		index($0, stop) || index($0, legacy_stop)  { skipping = 0; next }
 		!skipping
 	' "$source" >"$destination"
 }
@@ -335,7 +382,8 @@ reload_services() {
 wait_for_authelia() {
 	local remaining=20
 	while ((remaining > 0)); do
-		curl -fsS -o /dev/null --max-time 2 \
+		# Authelia closes the port briefly while restarting; only the timeout is an error.
+		curl -fsS -o /dev/null --max-time 2 2>/dev/null \
 			"http://127.0.0.1:${AUTHELIA_PORT}/api/health" && return 0
 		remaining=$((remaining - 1))
 		sleep 1
@@ -409,6 +457,7 @@ print_next_steps() {
 main() {
 	parse_arguments "$@"
 	require_commands
+	require_settings
 	install_ttyd
 	install_unit
 	install_app
