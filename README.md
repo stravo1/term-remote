@@ -121,18 +121,18 @@ the same way.
 ttyd's own client is desktop-shaped: no Escape, Tab, Ctrl or arrow keys, no home-screen install, no
 safe-area or soft-keyboard handling. `app/` replaces it with:
 
-- **Key bar** above the keyboard: Esc, Tab, sticky Ctrl/Alt, arrows, Home, End, PgUp, PgDn, `|`, `-`,
-  `/`, `~`. Sticky modifiers also apply to the next character typed on the soft keyboard, so Ctrl-C
-  and Esc work in vim or tmux.
+- **One bottom bar holds everything**: font size, scheme toggle, and the keys — Esc, Tab, sticky
+  Ctrl/Alt, arrows, Home, End, PgUp, PgDn, `|`, `-`, `/`, `~`. Sticky modifiers also apply to the
+  next character typed on the soft keyboard, so Ctrl-C and Esc work in vim or tmux. There is no
+  header; the terminal owns the whole screen.
 - **Espresso design system**: colors, radii, and focus rings come from frappe-ui's design tokens
-  (`app/vendor/espresso.css`, generated — see below), with Inter for UI text and JetBrains Mono for
-  the terminal. Light and dark schemes both work, with a ◐ toggle; the terminal, the installed
+  (`app/vendor/espresso.css`, generated — see below), with JetBrains Mono for everything. Light and dark schemes both work, with a ◐ toggle; the terminal, the installed
   app's status bar, and the page all follow the scheme.
 - **Installable**: Android/Chrome → ⋮ _Add to Home screen_; iOS/Safari → Share → _Add to Home
   Screen_. Runs standalone, with no browser chrome.
 - **Keyboard-aware layout**: `dvh` plus `visualViewport` tracking keeps the key bar above the soft
   keyboard, with notch-safe insets.
-- **Font size** A−/A+, persisted in `localStorage`.
+- **Font size** A−/A+ and the scheme toggle ◐ live in the bottom bar; the choice persists in `localStorage`.
 - **Touch scrolling** through scrollback, reconnect with backoff, and a Reconnect button.
 - **No service worker, on purpose.** A cached page paired with a fresh script is a terminal that
   never connects, so the shell is served with `Cache-Control: no-cache` and revalidated on every

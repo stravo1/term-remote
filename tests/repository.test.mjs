@@ -52,7 +52,7 @@ test("every element id the script expects exists in the markup", () => {
   const script = read("app/app.js");
 
   const wanted = new Set([...script.matchAll(/must\("([\w-]+)"\)/g)].map((match) => match[1]));
-  assert.ok(wanted.size >= 6, "the script should look up its elements by id");
+  assert.ok(wanted.size >= 5, "the script should look up its elements by id");
 
   for (const id of wanted) {
     assert.ok(markup.includes(`id="${id}"`), `index.html has no element with id "${id}"`);

@@ -9,6 +9,12 @@ const FONT = { min: 9, max: 26, step: 1, initial: 13, storageKey: "term-remote:f
 const THEME_KEY = "term-remote:theme";
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 10000];
 
+const ACTION_DEFINITIONS = [
+  { id: "font-down", label: "A−", labelText: "Smaller text" },
+  { id: "font-up", label: "A+", labelText: "Larger text" },
+  { id: "theme", label: "◐", labelText: "Switch color scheme" },
+];
+
 const KEY_SEQUENCES = {
   esc: "\x1b",
   tab: "\t",
@@ -294,9 +300,12 @@ class TerminalView {
 }
 
 class KeyBar {
-  constructor(element, onKey) {
+  // Action buttons lead the bar; terminal keys follow. Everything lives at the
+  // bottom, so the terminal owns the whole screen above.
+  constructor(element, onKey, onAction) {
     this.element = element;
     this.onKey = onKey;
+    this.onAction = onAction;
     this.armed = new Set();
     this.buttons = new Map();
     this.render();
@@ -307,12 +316,23 @@ class KeyBar {
   }
 
   render() {
+    const actions = ACTION_DEFINITIONS.map((action) => this.createActionButton(action));
     const buttons = KEY_DEFINITIONS.map((definition) => {
       const button = this.createButton(definition);
       this.buttons.set(definition.id, button);
       return button;
     });
-    this.element.replaceChildren(...buttons);
+    this.element.replaceChildren(...actions, ...buttons);
+  }
+
+  createActionButton(action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "key action-key";
+    button.textContent = action.label;
+    button.setAttribute("aria-label", action.labelText);
+    button.addEventListener("click", () => this.onAction(action.id));
+    return button;
   }
 
   createButton(definition) {
@@ -363,11 +383,13 @@ class KeyBar {
 class TerminalApp {
   constructor() {
     this.view = new TerminalView(must("terminal"));
-    this.keyBar = new KeyBar(must("keys"), (data, armed) => {
-      this.sendInput(applyModifiers(data, armed));
-    });
-    this.status = must("status");
-    this.title = must("title");
+    this.keyBar = new KeyBar(
+      must("keys"),
+      (data, armed) => {
+        this.sendInput(applyModifiers(data, armed));
+      },
+      (action) => this.runAction(action),
+    );
     this.overlay = must("overlay");
     this.overlayText = must("overlay-text");
     this.retryButton = must("retry");
@@ -379,19 +401,23 @@ class TerminalApp {
     });
     this.attempt = 0;
     this.retryTimer = null;
-    this.wireControls();
+    this.retryButton.addEventListener("click", () => this.connect());
+    this.wireInput();
     this.wireViewport();
     this.connect();
   }
 
-  wireControls() {
-    must("font-up").addEventListener("click", () => this.changeFontSize(FONT.step));
-    must("font-down").addEventListener("click", () => this.changeFontSize(-FONT.step));
-    must("theme-toggle").addEventListener("click", () => {
+  runAction(action) {
+    if (action === "font-up") {
+      this.changeFontSize(FONT.step);
+    } else if (action === "font-down") {
+      this.changeFontSize(-FONT.step);
+    } else if (action === "theme") {
       setScheme(!isDarkScheme());
-      this.view.applyTheme();
-    });
-    this.retryButton.addEventListener("click", () => this.connect());
+    }
+  }
+
+  wireInput() {
     this.view.onData((data) => {
       this.sendInput(applyModifiers(data, this.keyBar.activeModifiers));
       this.keyBar.clearModifiers();
@@ -427,7 +453,6 @@ class TerminalApp {
     clearTimeout(this.retryTimer);
     this.retryTimer = null;
     this.hideOverlay();
-    this.setStatus("connecting");
     this.view.fit();
     try {
       await this.socket.connect(this.view.columns, this.view.rows);
@@ -444,7 +469,6 @@ class TerminalApp {
 
   handleOpen() {
     this.attempt = 0;
-    this.setStatus("online");
     this.hideOverlay();
     this.view.fit();
     this.view.focus();
@@ -454,7 +478,6 @@ class TerminalApp {
     if (this.socket.closedByUser) {
       return;
     }
-    this.setStatus("offline");
     this.showOverlay("Connection lost");
     this.scheduleReconnect();
   }
@@ -485,13 +508,7 @@ class TerminalApp {
   }
 
   setTitle(text) {
-    const title = text.trim() || "Terminal";
-    this.title.textContent = title;
-    document.title = title;
-  }
-
-  setStatus(state) {
-    this.status.dataset.state = state;
+    document.title = text.trim() || "Terminal";
   }
 
   showOverlay(message) {

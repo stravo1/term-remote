@@ -35,26 +35,16 @@
   </head>
   <body>
     <div class="app">
-      <header class="bar">
-        <span class="status" id="status" data-state="connecting"></span>
-        <span class="title" id="title">Terminal</span>
-        <span class="actions">
-          <button class="action" id="font-down" type="button" aria-label="Smaller text">A−</button>
-          <button class="action" id="font-up" type="button" aria-label="Larger text">A+</button>
-          <button class="action" id="theme-toggle" type="button" aria-label="Switch color scheme">◐</button>
-        </span>
-      </header>
-
       <main class="screen" id="screen">
         <div id="terminal"></div>
       </main>
 
-      <nav class="keys" id="keys" aria-label="Terminal keys"></nav>
+      <nav class="keys" id="keys" aria-label="Terminal controls and keys"></nav>
     </div>
 
     <div class="overlay" id="overlay" hidden>
       <p class="overlay-text" id="overlay-text">Disconnected</p>
-      <button class="action primary" id="retry" type="button">Reconnect</button>
+      <button class="key" id="retry" type="button">Reconnect</button>
     </div>
 
     <script src="/vendor/xterm.js"></script>
