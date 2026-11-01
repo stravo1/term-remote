@@ -1,6 +1,6 @@
 {
-  "name": "Term",
-  "short_name": "Term",
+  "name": "term",
+  "short_name": "term",
   "description": "Browser terminal",
   "start_url": "/",
   "scope": "/",
