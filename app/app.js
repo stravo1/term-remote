@@ -190,7 +190,7 @@ class TerminalSocket {
     if (command === COMMAND.output) {
       this.callbacks.onOutput(body);
     } else if (command === COMMAND.windowTitle) {
-      this.callbacks.onWindowTitle(body);
+      this.callbacks.onWindowTitle?.(body);
     }
     // COMMAND '2' is server-side UI preferences; this client owns its own.
   }
@@ -412,7 +412,6 @@ class TerminalApp {
     this.retryButton = must("retry");
     this.socket = new TerminalSocket({
       onOutput: (data) => this.view.write(data),
-      onWindowTitle: (title) => this.setTitle(title),
       onOpen: () => this.handleOpen(),
       onClose: () => this.handleClose(),
     });
@@ -579,10 +578,6 @@ class TerminalApp {
     }
     localStorage.setItem(FONT.storageKey, String(next));
     this.view.setFontSize(next);
-  }
-
-  setTitle(text) {
-    document.title = text.trim() || "Terminal";
   }
 
   showOverlay(message) {
