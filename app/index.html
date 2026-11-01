@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#0b0f14" />
+    <meta name="description" content="Browser terminal" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Terminal" />
+    <title>Terminal</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="stylesheet" href="/vendor/xterm.css" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="bar">
+        <span class="status" id="status" data-state="connecting"></span>
+        <span class="title" id="title">Terminal</span>
+        <span class="actions">
+          <button class="action" id="font-down" type="button" aria-label="Smaller text">A−</button>
+          <button class="action" id="font-up" type="button" aria-label="Larger text">A+</button>
+        </span>
+      </header>
+
+      <main class="screen" id="screen">
+        <div id="terminal"></div>
+      </main>
+
+      <nav class="keys" id="keys" aria-label="Terminal keys"></nav>
+    </div>
+
+    <div class="overlay" id="overlay" hidden>
+      <p class="overlay-text" id="overlay-text">Disconnected</p>
+      <button class="action primary" id="retry" type="button">Reconnect</button>
+    </div>
+
+    <script src="/vendor/xterm.js"></script>
+    <script src="/vendor/addon-fit.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

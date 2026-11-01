@@ -1,0 +1,18 @@
+{
+	email admin@example.com
+}
+
+# Authelia portal
+auth.example.com {
+	reverse_proxy 127.0.0.1:9091
+}
+
+# Terminal: Authelia gates the handshake, ttyd handles the WebSocket
+term.example.com {
+	forward_auth 127.0.0.1:9091 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+	}
+
+	reverse_proxy 127.0.0.1:7681
+}

@@ -1,0 +1,19 @@
+# >>> web-terminal @DOMAIN@ (managed by setup-web-terminal.sh)
+@DOMAIN@ {
+	route {
+		request_header -Remote-User
+		forward_auth 127.0.0.1:@AUTHELIA_PORT@ {
+			uri /api/authz/forward-auth
+			copy_headers Remote-User
+		}
+
+		# Only the pty endpoints need ttyd; the UI is served statically below.
+		@terminal_api path /token /ws
+		reverse_proxy @terminal_api 127.0.0.1:@PORT@
+
+		header /manifest.webmanifest Content-Type application/manifest+json
+		root * @APP_ROOT@
+		file_server
+	}
+}
+# <<< web-terminal

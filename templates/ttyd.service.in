@@ -1,0 +1,16 @@
+# managed-by: setup-web-terminal.sh
+[Unit]
+Description=ttyd web terminal
+Documentation=https://github.com/tsl0922/ttyd
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=@TTYD_BINARY@ --interface 127.0.0.1 --port @PORT@ --writable --max-clients @MAX_CLIENTS@ tmux new -A -s @TMUX_SESSION@
+WorkingDirectory=@WORKDIR@
+Environment=TERM=xterm-256color
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

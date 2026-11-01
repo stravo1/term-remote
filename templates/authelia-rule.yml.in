@@ -1,0 +1,4 @@
+    # >>> web-terminal @DOMAIN@ (managed by setup-web-terminal.sh)
+    - domain: '@DOMAIN@'
+      policy: '@POLICY@'
+    # <<< web-terminal

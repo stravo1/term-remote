@@ -1,0 +1,17 @@
+---
+###############################################################
+# Generate the hash on the host:
+#
+#   docker run --rm authelia/authelia:4.38 \
+#     authelia crypto hash generate argon2 --password 'your-password'
+#
+# Paste the whole "$argon2id$v=19$..." string below.
+###############################################################
+
+users:
+  you:
+    displayname: Your Name
+    password: 'CHANGE_ME_ARGON2ID_HASH'
+    email: you@example.com
+    groups:
+      - admins

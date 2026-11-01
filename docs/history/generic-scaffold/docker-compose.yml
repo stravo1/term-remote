@@ -1,0 +1,13 @@
+---
+# Authelia only. Caddy and ttyd run on the host so that ttyd gets a real
+# shell on the VM instead of a container with the host filesystem bolted on.
+services:
+  authelia:
+    image: authelia/authelia:4.38
+    container_name: authelia
+    restart: unless-stopped
+    volumes:
+      - ./authelia:/config
+    ports:
+      # Loopback only: Caddy is the single entry point.
+      - '127.0.0.1:9091:9091'
