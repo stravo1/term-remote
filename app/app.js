@@ -676,15 +676,35 @@ class TerminalApp {
   }
 }
 
+// A page restored from cache can pair an old index.html with a fresh app.js.
+// One network reload with a fresh query settles the pair; if ids are still
+// missing after that, the files themselves disagree and the error stands.
+class StaleMarkupError extends Error {
+  constructor(id) {
+    super(`#${id} is missing; the page and app.js are out of step — reload the page`);
+    this.name = "StaleMarkupError";
+  }
+}
+
 // Looks an element up by id and refuses to continue without it: a missing id
 // means the script and the markup are out of step (a stale cached page), and
 // half a terminal is worse than a clear error.
 function must(id) {
   const element = document.getElementById(id);
   if (!element) {
-    throw new Error(`#${id} is missing; the page and app.js are out of step — reload the page`);
+    throw new StaleMarkupError(id);
   }
   return element;
+}
+
+function reloadForFreshMarkup() {
+  const url = new URL(location.href);
+  if (url.searchParams.has("fresh")) {
+    return false;
+  }
+  url.searchParams.set("fresh", String(Date.now()));
+  location.replace(url);
+  return true;
 }
 
 function boot() {
@@ -695,6 +715,9 @@ function boot() {
   try {
     new TerminalApp();
   } catch (error) {
+    if (error instanceof StaleMarkupError && reloadForFreshMarkup()) {
+      return;
+    }
     console.error("[terminal] failed to start", error);
     document.body.textContent = `Terminal failed to start: ${error.message}`;
   }

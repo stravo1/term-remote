@@ -61,6 +61,14 @@ test("every element id the script expects exists in the markup", () => {
   assert.ok(!existsSync(join(ROOT, "app", "sw.js")), "the service worker was removed; do not reintroduce it");
 });
 
+test("a stale page reloads once before it reports the missing id", () => {
+  const source = read("app/app.js");
+
+  assert.match(source, /class StaleMarkupError extends Error/, "missing ids should be distinguishable");
+  assert.match(source, /error instanceof StaleMarkupError && reloadForFreshMarkup\(\)/);
+  assert.match(source, /searchParams\.has\("fresh"\)/, "the recovery reload must not loop");
+});
+
 test("every template placeholder is substituted by the provisioner", () => {
   const provisioner = read("setup-term-remote.sh");
 

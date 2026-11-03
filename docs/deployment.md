@@ -102,5 +102,7 @@ by hand does not survive, because every deploy rsyncs over it.
   not answering, Authelia not gating the domain, or Caddy not serving it.
 - **A change did not restart anything.** That is expected when the rendered files
   did not change. `systemctl --user restart ttyd` forces it.
-- **The browser shows an old page.** The service worker cached it. Bump
-  `CACHE_NAME` in `app/sw.js` and push.
+- **The browser shows an old page.** Reload it. A missing element id triggers one
+  automatic reload with a fresh query, which fetches the page and the script from
+  the same release. If the message persists, clear the site data for the domain.
+  There is no service worker.
