@@ -140,7 +140,7 @@ test("the client uses the ttyd command bytes that the protocol test verifies", (
   assert.match(source, /AuthToken/);
 });
 
-test("the settings dialog offers every theme the script knows", () => {
+test("the floating theme toggle cycles through every theme", () => {
   const source = read("app/app.js");
   const markup = read("app/index.html");
 
@@ -149,9 +149,9 @@ test("the settings dialog offers every theme the script knows", () => {
   const choices = [...declared[1].matchAll(/"(\w+)"/g)].map((match) => match[1]);
 
   assert.ok(choices.includes("system"), "the theme should be able to follow the OS");
-  for (const choice of choices) {
-    assert.ok(markup.includes(`data-theme-choice="${choice}"`), `the settings dialog has no "${choice}" theme`);
-  }
+  assert.match(source, /function nextThemeChoice\(/, "the toggle should walk the theme choices");
+  assert.match(markup, /id="theme-toggle"/, "index.html should hold the theme toggle");
+  assert.doesNotMatch(markup, /<dialog/, "the settings dialog gave way to floating controls");
 });
 
 test("only a dropped connection offers the Reconnect button", () => {

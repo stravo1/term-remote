@@ -65,9 +65,9 @@ body {
   color: transparent;
 }
 
-/* The only chrome on touch devices: one bar at the bottom holding the actions
- * and the keys. A fine pointer means a real keyboard, so the bar is hidden
- * there and settings move to the floating button. */
+/* The only bar on touch devices: one at the bottom holding the clipboard
+ * actions and the keys. A fine pointer means a real keyboard, so the bar is
+ * hidden there and the terminal owns the whole screen. */
 .keys {
   display: flex;
   flex: none;
@@ -123,121 +123,48 @@ body.keyboard-open .keys {
   background: var(--surface-gray-3);
 }
 
-/* An armed modifier and the chosen theme are the Espresso solid button:
- * high-contrast fill, ink flipped to the surface color. */
-.key.modifier.active,
-.key.option.active {
+/* An armed modifier is the Espresso solid button: high-contrast fill, ink
+ * flipped to the surface color. */
+.key.modifier.active {
   border-color: var(--ink-gray-9);
   background: var(--ink-gray-9);
   color: var(--surface-base);
   font-weight: 600;
 }
 
-/* Action keys (settings, clipboard) lead the bar with a quieter fill. */
+/* Action keys (clipboard) lead the bar with a quieter fill. */
 .key.action-key {
   background: transparent;
 }
 
-.settings-fab {
+/* The settings controls float in the top-right corner on every device: the
+ * theme toggle and the two text-size keys act immediately, with no dialog. */
+.float-controls {
   position: fixed;
   top: calc(0.5rem + env(safe-area-inset-top));
   right: calc(0.5rem + env(safe-area-inset-right));
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 2.3rem;
-  height: 2.3rem;
-  padding: 0;
-  border: 1px solid var(--outline-gray-2);
-  border-radius: var(--radius-4);
-  background: var(--surface-gray-2);
-  color: var(--ink-gray-6);
-  cursor: pointer;
-  opacity: 0.55;
-  transition:
-    opacity 150ms,
-    color 150ms;
+  display: flex;
+  gap: 0.3rem;
 }
 
-/* Desktop has no key bar; the button is the way into settings. */
-@media (hover: hover) and (pointer: fine) {
-  .settings-fab {
-    display: flex;
-  }
+.float-key {
+  min-width: 2.1rem;
+  height: 2.1rem;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  background: var(--surface-elevation-1);
+  box-shadow: var(--elevation-sm);
+  opacity: 0.8;
+  transition: opacity 150ms;
 }
 
-.settings-fab:hover,
-.settings-fab:focus-visible {
-  color: var(--ink-gray-8);
+.float-key:hover,
+.float-key:focus-visible {
   opacity: 1;
 }
 
-.settings {
-  width: min(22rem, calc(100vw - 2rem));
-  max-height: calc(100% - 2rem);
-  padding: 1rem;
-  overflow: auto;
-  border: 1px solid var(--outline-gray-3);
-  border-radius: var(--radius-6);
-  background: var(--surface-elevation-1);
-  color: var(--ink-gray-8);
-  box-shadow: var(--elevation-lg);
-}
-
-.settings::backdrop {
-  background: color-mix(in oklab, var(--surface-base) 70%, transparent);
-}
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.9rem;
-}
-
-.settings-title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.settings-close {
-  min-width: 2rem;
-  height: 2rem;
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.settings-section + .settings-section {
-  margin-top: 0.9rem;
-}
-
-.settings-label {
-  margin: 0 0 0.4rem;
-  color: var(--ink-gray-6);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.settings-options {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.settings-options .key {
-  flex: 1;
-}
-
-.settings-value {
-  flex: none;
-  min-width: 3.5rem;
-  color: var(--ink-gray-7);
-  font-size: 0.85rem;
-  text-align: center;
+.theme-key {
+  min-width: 3.2rem;
 }
 
 /* The button only appears when the connection actually dropped. */

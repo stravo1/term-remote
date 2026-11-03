@@ -124,14 +124,15 @@ safe-area or soft-keyboard handling. `app/` replaces it with:
 - **Copy and paste keys** in the bottom bar: Paste reads the clipboard (with bracketed-paste
   wrapping when the program in the pty asks for it), Copy writes the current selection back.
   Paste needs a tap to satisfy iOS clipboard permission; Copy needs a selection first.
-- **One bottom bar on touch devices** holds Settings, Paste, Copy, and the keys — Esc, Tab, sticky
-  Ctrl/Alt, arrows, Home, End, PgUp, PgDn, `|`, `-`, `/`, `~`. Sticky modifiers also apply to the
-  next character typed on the soft keyboard, so Ctrl-C and Esc work in vim or tmux. There is no
-  header; the terminal owns the whole screen.
+- **One bottom bar on touch devices** holds Paste, Copy, and the keys — Esc, Tab, sticky Ctrl/Alt,
+  arrows, Home, End, PgUp, PgDn, `|`, `-`, `/`, `~`. Sticky modifiers also apply to the next
+  character typed on the soft keyboard, so Ctrl-C and Esc work in vim or tmux. There is no header;
+  the terminal owns the whole screen.
 - **No key bar on desktop.** A fine pointer means a real keyboard, so the bar and its keys are
-  hidden and only a small Settings button stays in the corner.
-- **Settings modal** holds the theme (System, Light or Dark), the text size, and the connection
-  state with a Reconnect action. The choices persist in `localStorage`; System follows the OS.
+  hidden.
+- **Floating controls** sit in the top-right corner on every device: a theme toggle (Auto, Light or
+  Dark) and smaller/larger text keys. They act immediately, with no dialog. The choices persist in
+  `localStorage`; Auto follows the OS.
 - **Espresso design system**: colors, radii, and focus rings come from frappe-ui's design tokens
   (`app/vendor/espresso.css`, generated — see below), with JetBrains Mono for everything. The
   terminal, the installed app's status bar, and the page all follow the chosen theme.
