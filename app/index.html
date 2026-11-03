@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark" data-theme-choice="system">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -14,20 +14,6 @@
     <meta name="apple-mobile-web-app-title" content="term" />
     <meta name="color-scheme" content="dark" />
     <title>term</title>
-    <script>
-      // Paint the saved theme before the app loads, so a light page does not
-      // flash dark. "system" (the default) follows the OS setting. The status
-      // bar color follows the scheme the same way.
-      try {
-        const stored = localStorage.getItem("term-remote:theme");
-        const choice = ["system", "light", "dark"].includes(stored) ? stored : "system";
-        const isDark = choice === "dark" || (choice !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-        document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
-        document.documentElement.setAttribute("data-theme-choice", choice);
-        document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#1a1a1a" : "#ffffff");
-        document.querySelector('meta[name="color-scheme"]').setAttribute("content", isDark ? "dark" : "light");
-      } catch {}
-    </script>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -46,27 +32,6 @@
     </div>
 
     <div class="float-controls" id="float-controls" role="group" aria-label="Terminal settings">
-      <button class="key float-key theme-key" id="theme-toggle" type="button" aria-label="Theme: Auto. Change theme">
-        <svg class="theme-icon theme-icon-system" viewBox="0 0 24 24" aria-hidden="true">
-          <rect width="20" height="14" x="2" y="3" rx="2" />
-          <line x1="8" x2="16" y1="21" y2="21" />
-          <line x1="12" x2="12" y1="17" y2="21" />
-        </svg>
-        <svg class="theme-icon theme-icon-light" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2v2" />
-          <path d="M12 20v2" />
-          <path d="m4.93 4.93 1.41 1.41" />
-          <path d="m17.66 17.66 1.41 1.41" />
-          <path d="M2 12h2" />
-          <path d="M20 12h2" />
-          <path d="m6.34 17.66-1.41 1.41" />
-          <path d="m19.07 4.93-1.41 1.41" />
-        </svg>
-        <svg class="theme-icon theme-icon-dark" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-        </svg>
-      </button>
       <button class="key float-key" id="font-down" type="button" aria-label="Smaller text">A−</button>
       <button class="key float-key" id="font-up" type="button" aria-label="Larger text">A+</button>
     </div>

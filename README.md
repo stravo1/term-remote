@@ -130,12 +130,12 @@ safe-area or soft-keyboard handling. `app/` replaces it with:
   the terminal owns the whole screen.
 - **No key bar on desktop.** A fine pointer means a real keyboard, so the bar and its keys are
   hidden.
-- **Floating controls** sit in the top-right corner on every device: a theme toggle (Auto, Light or
-  Dark) and smaller/larger text keys. They act immediately, with no dialog. The choices persist in
-  `localStorage`; Auto follows the OS.
+- **Floating controls** sit in the top-right corner on every device: smaller and larger text keys.
+  They act immediately, with no dialog. The size persists in `localStorage`.
 - **Espresso design system**: colors, radii, and focus rings come from frappe-ui's design tokens
   (`app/vendor/espresso.css`, generated — see below), with JetBrains Mono for everything. The
-  terminal, the installed app's status bar, and the page all follow the chosen theme.
+  interface is dark only, so the terminal, the installed app's status bar, and the page share the
+  same palette.
 - **Installable**: Android/Chrome → ⋮ _Add to Home screen_; iOS/Safari → Share → _Add to Home
   Screen_. Runs standalone, with no browser chrome.
 - **Keyboard-aware layout**: `dvh` plus `visualViewport` tracking keeps the key bar above the soft

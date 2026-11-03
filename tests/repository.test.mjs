@@ -148,32 +148,17 @@ test("the client uses the ttyd command bytes that the protocol test verifies", (
   assert.match(source, /AuthToken/);
 });
 
-test("the floating theme toggle cycles through every theme", () => {
-  const source = read("app/app.js");
-  const markup = read("app/index.html");
-
-  const declared = source.match(/const THEME_CHOICES = \[([^\]]*)\]/);
-  assert.ok(declared, "app.js should declare the theme choices");
-  const choices = [...declared[1].matchAll(/"(\w+)"/g)].map((match) => match[1]);
-
-  assert.ok(choices.includes("system"), "the theme should be able to follow the OS");
-  assert.match(source, /function nextThemeChoice\(/, "the toggle should walk the theme choices");
-  assert.match(markup, /id="theme-toggle"/, "index.html should hold the theme toggle");
-  assert.doesNotMatch(markup, /<dialog/, "the settings dialog gave way to floating controls");
-});
-
-test("the theme toggle shows one Lucide icon per choice", () => {
+test("the page is dark only", () => {
   const source = read("app/app.js");
   const markup = read("app/index.html");
   const styles = read("app/styles.css");
+  const espresso = read("app/vendor/espresso.css");
 
-  for (const icon of ["system", "light", "dark"]) {
-    assert.match(markup, new RegExp(`class="theme-icon theme-icon-${icon}"`), `index.html has no ${icon} icon`);
-    assert.match(styles, new RegExp(`data-theme-choice="${icon}"[^{]*\\.theme-icon-${icon}`));
-  }
-  assert.doesNotMatch(source, /themeButton\.textContent/, "the toggle is icon-only, so it has no label text");
-  assert.match(source, /dataset\.themeChoice = choice/, "the choice decides the icon, so applyTheme owns it");
-  assert.match(markup, /data-theme-choice/, "index.html should carry the choice before the script runs");
+  assert.match(markup, /<meta name="color-scheme" content="dark" \/>/);
+  assert.doesNotMatch(markup, /theme-toggle|data-theme/, "index.html should not offer a theme choice");
+  assert.doesNotMatch(source, /THEME_|themeChoice|applyTheme|prefers-color-scheme/);
+  assert.doesNotMatch(styles, /theme-icon|theme-key/, "styles.css should not style a theme toggle");
+  assert.doesNotMatch(espresso, /\[data-theme=/, "the token file should carry one dark layer only");
 });
 
 test("only a dropped connection offers the Reconnect button", () => {

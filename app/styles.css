@@ -1,6 +1,6 @@
 /* Espresso design system, via the generated frappe-ui tokens. Colors, radii
  * and focus rings come from app/vendor/espresso.css; nothing here hardcodes a
- * color, so light and dark themes both work. The whole UI is mono. */
+ * color. The UI is dark only. The whole UI is mono. */
 
 :root {
   --font-ui: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -137,8 +137,8 @@ body.keyboard-open .keys {
   background: transparent;
 }
 
-/* The settings controls float in the top-right corner on every device: the
- * theme toggle and the two text-size keys act immediately, with no dialog. */
+/* The text-size controls float in the top-right corner on every device. They
+ * act immediately, with no dialog. */
 .float-controls {
   position: fixed;
   top: calc(0.5rem + env(safe-area-inset-top));
@@ -161,31 +161,6 @@ body.keyboard-open .keys {
 .float-key:hover,
 .float-key:focus-visible {
   opacity: 1;
-}
-
-.theme-key {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.1rem;
-}
-
-/* One Lucide glyph at a time, chosen by the theme the toggle is on. */
-.theme-icon {
-  display: none;
-  width: 0.95rem;
-  height: 0.95rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-html[data-theme-choice="system"] .theme-icon-system,
-html[data-theme-choice="light"] .theme-icon-light,
-html[data-theme-choice="dark"] .theme-icon-dark {
-  display: block;
 }
 
 /* The button only appears when the connection actually dropped. */

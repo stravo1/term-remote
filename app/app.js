@@ -6,13 +6,6 @@ const ENDPOINTS = { token: "/token", socket: "/ws" };
 const COMMAND = { input: "0", output: "0", resize: "1", windowTitle: "1" };
 
 const FONT = { min: 9, max: 26, step: 1, initial: 13, storageKey: "term-remote:font-size" };
-const THEME_KEY = "term-remote:theme";
-const THEME_CHOICES = ["system", "light", "dark"];
-const THEME_LABELS = { system: "Auto", light: "Light", dark: "Dark" };
-const SCHEME_META = {
-  dark: { color: "#1a1a1a", scheme: "dark" },
-  light: { color: "#ffffff", scheme: "light" },
-};
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 10000];
 
 const ACTION_DEFINITIONS = [
@@ -67,38 +60,6 @@ function loadFontSize() {
   return Math.round(stored);
 }
 
-function themeChoice() {
-  const stored = localStorage.getItem(THEME_KEY);
-  return THEME_CHOICES.includes(stored) ? stored : "system";
-}
-
-function isDarkChoice(choice) {
-  if (choice === "dark") {
-    return true;
-  }
-  return choice !== "light" && matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-// One owner for the scheme: the chosen theme drives the page, the browser
-// chrome, and (through the MutationObserver) the xterm palette.
-function applyTheme(choice) {
-  const scheme = isDarkChoice(choice) ? "dark" : "light";
-  document.documentElement.dataset.theme = scheme;
-  // The choice, not just the scheme, decides which icon the toggle shows.
-  document.documentElement.dataset.themeChoice = choice;
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", SCHEME_META[scheme].color);
-  document.querySelector('meta[name="color-scheme"]').setAttribute("content", SCHEME_META[scheme].scheme);
-}
-
-function setThemeChoice(choice) {
-  localStorage.setItem(THEME_KEY, choice);
-  applyTheme(choice);
-}
-
-function nextThemeChoice(choice) {
-  return THEME_CHOICES[(THEME_CHOICES.indexOf(choice) + 1) % THEME_CHOICES.length];
-}
-
 function socketUrl() {
   const scheme = location.protocol === "https:" ? "wss:" : "ws:";
   return `${scheme}//${location.host}${ENDPOINTS.socket}`;
@@ -139,8 +100,8 @@ function applyModifiers(data, armed) {
   return result;
 }
 
-// Maps Espresso tokens to the xterm palette, so the terminal follows the
-// color scheme the page uses. Read at connect time and on theme changes.
+// Maps the Espresso tokens to the xterm palette, so the terminal uses the
+// same colors as the page.
 function espressoTerminalTheme() {
   const token = (name, fallback) => {
     const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -271,10 +232,6 @@ class TerminalView {
   setFontSize(size) {
     this.terminal.options.fontSize = size;
     this.fit();
-  }
-
-  applyTheme() {
-    this.terminal.options.theme = espressoTerminalTheme();
   }
 
   getSelection() {
@@ -433,13 +390,7 @@ class FloatingControls {
   constructor(element, handlers) {
     this.element = element;
     this.handlers = handlers;
-    this.themeButton = must("theme-toggle");
-    this.syncTheme(themeChoice());
     this.wire();
-  }
-
-  syncTheme(choice) {
-    this.themeButton.setAttribute("aria-label", `Theme: ${THEME_LABELS[choice]}. Change theme`);
   }
 
   wire() {
@@ -448,11 +399,6 @@ class FloatingControls {
     for (const button of this.element.querySelectorAll("button")) {
       button.addEventListener("pointerdown", (event) => event.preventDefault());
     }
-    this.themeButton.addEventListener("click", () => {
-      const choice = nextThemeChoice(themeChoice());
-      setThemeChoice(choice);
-      this.syncTheme(choice);
-    });
     must("font-down").addEventListener("click", () => this.handlers.onFontSize(-FONT.step));
     must("font-up").addEventListener("click", () => this.handlers.onFontSize(FONT.step));
   }
@@ -559,19 +505,6 @@ class TerminalApp {
   }
 
   wireViewport() {
-    // The pre-paint script in index.html owns the initial scheme. A theme set
-    // to "system" has to follow the OS while the page is open.
-    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-      if (themeChoice() === "system") {
-        applyTheme("system");
-      }
-    });
-    // The token values change under us when the scheme flips; re-read them.
-    new MutationObserver(() => this.view.applyTheme()).observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    });
-
     const viewport = window.visualViewport;
 
     // The keyboard shrinks the visual viewport while the layout viewport stays
