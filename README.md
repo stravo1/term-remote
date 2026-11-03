@@ -150,7 +150,8 @@ The protocol is small: binary frames, `0` + input, `1` + JSON resize, a JSON ini
 the server. `tests/protocol.test.mjs` starts a real ttyd and asserts each of those, so a ttyd upgrade
 that changes framing fails CI before it reaches the page.
 
-To change the frontend, edit `app/` and re-run the provisioner. `xterm.js`, `addon-fit.js`, the Espresso tokens, and the Inter
+To change the frontend, edit `app/` and run `npm run dev` (see [Local development](#local-development)).
+`xterm.js`, `addon-fit.js`, the Espresso tokens, and the Inter
 and JetBrains Mono fonts are vendored in `app/vendor/`; the page makes no external requests at
 runtime. After a frappe-ui upgrade, refresh the tokens with
 `node tools/generate-espresso.mjs <path-to-frappe-ui>`.
@@ -180,11 +181,37 @@ deploy/receive.sh              forced command CI runs on the host
 deploy/deploy-key.sh           installs a CI deploy key in authorized_keys
 tests/                         node:test suite, including the ttyd protocol
 tools/check-repository.mjs     syntax and executable-bit checks
+tools/dev.mjs                  local dev server: app/ with live reload, plus a ttyd proxy
 tools/generate-icons.py        regenerates app/icons/*.png without a GUI library
 tools/generate-espresso.mjs    regenerates the vendored Espresso tokens and fonts
 docs/deployment.md             CI, secrets, bootstrap, rollback
 docs/history/                  reference deployment record and the early container variant
 ```
+
+## Local development
+
+```sh
+npm install
+npm run dev    # then open http://127.0.0.1:8080
+```
+
+`npm run dev` runs the whole loop in one process. It starts ttyd on loopback with
+`tmux new -A -s dev`, serves `app/` on one origin, and proxies `/token` and `/ws` to ttyd, the way
+Caddy does on the host. Saving a file under `app/` reloads the page. The pty is not restarted, so
+the same tmux session is still there after a reload.
+
+| variable        | default              | meaning                                                   |
+| --------------- | -------------------- | --------------------------------------------------------- |
+| `DEV_PORT`      | `8080`               | port the browser opens                                    |
+| `DEV_HOST`      | `127.0.0.1`          | interface to bind; `0.0.0.0` exposes the shell to the LAN |
+| `DEV_TTYD_PORT` | `7682`               | dev ttyd port, clear of the provisioned service on 7681   |
+| `DEV_APP_ROOT`  | `app/`               | directory served                                          |
+| `DEV_COMMAND`   | `tmux new -A -s dev` | command ttyd runs in the pty                              |
+| `TTYD_BIN`      | `~/.local/bin/ttyd`  | ttyd binary                                               |
+
+The loop stops at the proxy. Authelia is not running locally, so login, TOTP and session expiry
+still need the host. `DEV_HOST=0.0.0.0` puts an unauthenticated shell on your network, so keep it
+on loopback unless you trust that network.
 
 ## Checks
 

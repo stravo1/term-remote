@@ -6,6 +6,7 @@
     "node": ">=22.19.0"
   },
   "scripts": {
+    "dev": "node tools/dev.mjs",
     "check": "npm run format:check && npm run lint",
     "lint": "eslint . && shellcheck setup-term-remote.sh deploy/*.sh && node tools/check-repository.mjs",
     "format": "prettier --write .",
