@@ -162,6 +162,20 @@ test("the floating theme toggle cycles through every theme", () => {
   assert.doesNotMatch(markup, /<dialog/, "the settings dialog gave way to floating controls");
 });
 
+test("the theme toggle shows one Lucide icon per choice", () => {
+  const source = read("app/app.js");
+  const markup = read("app/index.html");
+  const styles = read("app/styles.css");
+
+  for (const icon of ["system", "light", "dark"]) {
+    assert.match(markup, new RegExp(`class="theme-icon theme-icon-${icon}"`), `index.html has no ${icon} icon`);
+    assert.match(styles, new RegExp(`data-theme-choice="${icon}"[^{]*\\.theme-icon-${icon}`));
+  }
+  assert.doesNotMatch(source, /themeButton\.textContent/, "the toggle is icon-only, so it has no label text");
+  assert.match(source, /dataset\.themeChoice = choice/, "the choice decides the icon, so applyTheme owns it");
+  assert.match(markup, /data-theme-choice/, "index.html should carry the choice before the script runs");
+});
+
 test("only a dropped connection offers the Reconnect button", () => {
   const source = read("app/app.js");
 

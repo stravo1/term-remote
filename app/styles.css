@@ -164,7 +164,28 @@ body.keyboard-open .keys {
 }
 
 .theme-key {
-  min-width: 3.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+}
+
+/* One Lucide glyph at a time, chosen by the theme the toggle is on. */
+.theme-icon {
+  display: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-theme-choice="system"] .theme-icon-system,
+html[data-theme-choice="light"] .theme-icon-light,
+html[data-theme-choice="dark"] .theme-icon-dark {
+  display: block;
 }
 
 /* The button only appears when the connection actually dropped. */

@@ -84,6 +84,8 @@ function isDarkChoice(choice) {
 function applyTheme(choice) {
   const scheme = isDarkChoice(choice) ? "dark" : "light";
   document.documentElement.dataset.theme = scheme;
+  // The choice, not just the scheme, decides which icon the toggle shows.
+  document.documentElement.dataset.themeChoice = choice;
   document.querySelector('meta[name="theme-color"]').setAttribute("content", SCHEME_META[scheme].color);
   document.querySelector('meta[name="color-scheme"]').setAttribute("content", SCHEME_META[scheme].scheme);
 }
@@ -437,7 +439,6 @@ class FloatingControls {
   }
 
   syncTheme(choice) {
-    this.themeButton.textContent = THEME_LABELS[choice];
     this.themeButton.setAttribute("aria-label", `Theme: ${THEME_LABELS[choice]}. Change theme`);
   }
 
