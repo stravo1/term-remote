@@ -7,12 +7,15 @@ const COMMAND = { input: "0", output: "0", resize: "1", windowTitle: "1" };
 
 const FONT = { min: 9, max: 26, step: 1, initial: 13, storageKey: "term-remote:font-size" };
 const THEME_KEY = "term-remote:theme";
+const THEME_CHOICES = ["system", "light", "dark"];
+const SCHEME_META = {
+  dark: { color: "#1a1a1a", scheme: "dark" },
+  light: { color: "#ffffff", scheme: "light" },
+};
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 10000];
 
 const ACTION_DEFINITIONS = [
-  { id: "font-down", label: "A−", labelText: "Smaller text" },
-  { id: "font-up", label: "A+", labelText: "Larger text" },
-  { id: "theme", label: "◐", labelText: "Switch color scheme" },
+  { id: "settings", labelText: "Settings", icon: true },
   { id: "paste", label: "Paste", labelText: "Paste from clipboard" },
   { id: "copy", label: "Copy", labelText: "Copy selection" },
 ];
@@ -62,6 +65,32 @@ function loadFontSize() {
     return FONT.initial;
   }
   return Math.round(stored);
+}
+
+function themeChoice() {
+  const stored = localStorage.getItem(THEME_KEY);
+  return THEME_CHOICES.includes(stored) ? stored : "system";
+}
+
+function isDarkChoice(choice) {
+  if (choice === "dark") {
+    return true;
+  }
+  return choice !== "light" && matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+// One owner for the scheme: the chosen theme drives the page, the browser
+// chrome, and (through the MutationObserver) the xterm palette.
+function applyTheme(choice) {
+  const scheme = isDarkChoice(choice) ? "dark" : "light";
+  document.documentElement.dataset.theme = scheme;
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", SCHEME_META[scheme].color);
+  document.querySelector('meta[name="color-scheme"]').setAttribute("content", SCHEME_META[scheme].scheme);
+}
+
+function setThemeChoice(choice) {
+  localStorage.setItem(THEME_KEY, choice);
+  applyTheme(choice);
 }
 
 function socketUrl() {
@@ -118,21 +147,6 @@ function espressoTerminalTheme() {
     cursorAccent: token("--surface-base", "#1a1a1a"),
     selectionBackground: `color-mix(in oklab, ${token("--ink-gray-4", "#aeaeae")} 30%, transparent)`,
   };
-}
-
-function isDarkScheme() {
-  return document.documentElement.dataset.theme !== "light";
-}
-
-function syncSchemeMeta(isDark) {
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#1a1a1a" : "#ffffff");
-  document.querySelector('meta[name="color-scheme"]').setAttribute("content", isDark ? "dark" : "light");
-}
-
-function setScheme(isDark) {
-  document.documentElement.dataset.theme = isDark ? "dark" : "light";
-  localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
-  syncSchemeMeta(isDark);
 }
 
 class TerminalSocket {
@@ -230,6 +244,10 @@ class TerminalView {
 
   get fontSize() {
     return this.terminal.options.fontSize;
+  }
+
+  get isFocused() {
+    return this.terminal.textarea === document.activeElement;
   }
 
   write(data) {
@@ -346,7 +364,11 @@ class KeyBar {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "key action-key";
-    button.textContent = action.label;
+    if (action.icon) {
+      button.append(createSettingsIcon());
+    } else {
+      button.textContent = action.label;
+    }
     button.setAttribute("aria-label", action.labelText);
     this.wireFocusKeeper(button);
     button.addEventListener("click", () => this.onAction(action.id));
@@ -407,6 +429,103 @@ class KeyBar {
   }
 }
 
+// The vendored mono font has no gear glyph, so the icon is inline SVG. Both
+// the key bar and the desktop button build it from this one definition.
+function createSettingsIcon() {
+  const namespace = "http://www.w3.org/2000/svg";
+  const icon = document.createElementNS(namespace, "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("width", "18");
+  icon.setAttribute("height", "18");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor");
+  icon.setAttribute("stroke-width", "1.7");
+  icon.setAttribute("stroke-linecap", "round");
+
+  const path = document.createElementNS(namespace, "path");
+  path.setAttribute("d", "M4 7h9M17 7h3M4 12h3M11 12h9M4 17h11M19 17h1");
+  icon.append(path);
+  for (const [x, y] of [
+    [15, 7],
+    [9, 12],
+    [17, 17],
+  ]) {
+    const knob = document.createElementNS(namespace, "circle");
+    knob.setAttribute("cx", String(x));
+    knob.setAttribute("cy", String(y));
+    knob.setAttribute("r", "2");
+    icon.append(knob);
+  }
+  return icon;
+}
+
+class SettingsPanel {
+  constructor(element, handlers) {
+    this.element = element;
+    this.handlers = handlers;
+    this.themeButtons = [...element.querySelectorAll("[data-theme-choice]")];
+    this.fontValue = must("font-value");
+    this.connectionState = must("connection-state");
+    this.closeButton = must("settings-close");
+    this.reconnectButton = must("reconnect");
+    this.wire();
+  }
+
+  get isOpen() {
+    return this.element.open;
+  }
+
+  open(state) {
+    this.syncTheme(state.themeChoice);
+    this.syncFontSize(state.fontSize);
+    this.syncConnection(state.isConnected);
+    this.element.showModal();
+  }
+
+  close() {
+    if (this.isOpen) {
+      this.element.close();
+    }
+  }
+
+  syncTheme(choice) {
+    for (const button of this.themeButtons) {
+      const isActive = button.dataset.themeChoice === choice;
+      button.classList.toggle("active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    }
+  }
+
+  syncFontSize(size) {
+    this.fontValue.textContent = String(size);
+  }
+
+  syncConnection(isConnected) {
+    this.connectionState.textContent = isConnected ? "Connected" : "Disconnected";
+  }
+
+  wire() {
+    this.closeButton.addEventListener("click", () => this.close());
+    this.reconnectButton.addEventListener("click", () => {
+      this.handlers.onReconnect();
+      this.close();
+    });
+    must("font-down").addEventListener("click", () => this.handlers.onFontSize(-FONT.step));
+    must("font-up").addEventListener("click", () => this.handlers.onFontSize(FONT.step));
+    for (const button of this.themeButtons) {
+      button.addEventListener("click", () => this.handlers.onTheme(button.dataset.themeChoice));
+    }
+    // Escape closes the native dialog; clicking the backdrop should too.
+    this.element.addEventListener("click", (event) => {
+      if (event.target === this.element) {
+        this.close();
+      }
+    });
+    this.element.addEventListener("close", () => this.handlers.onClose());
+  }
+}
+
 class TerminalApp {
   constructor() {
     this.view = new TerminalView(must("terminal"));
@@ -421,6 +540,23 @@ class TerminalApp {
     this.overlay = must("overlay");
     this.overlayText = must("overlay-text");
     this.retryButton = must("retry");
+    this.returnFocusToTerminal = false;
+    this.settings = new SettingsPanel(must("settings"), {
+      onTheme: (choice) => {
+        setThemeChoice(choice);
+        this.settings.syncTheme(choice);
+      },
+      onFontSize: (delta) => {
+        this.changeFontSize(delta);
+        this.settings.syncFontSize(this.view.fontSize);
+      },
+      onReconnect: () => this.connect(),
+      onClose: () => {
+        if (this.returnFocusToTerminal) {
+          this.view.focus();
+        }
+      },
+    });
     this.socket = new TerminalSocket({
       onOutput: (data) => this.view.write(data),
       onOpen: () => this.handleOpen(),
@@ -430,19 +566,35 @@ class TerminalApp {
     this.retryTimer = null;
     this.noticeTimer = null;
     this.retryButton.addEventListener("click", () => this.connect());
+    this.wireSettingsButton();
     this.wireInput();
     this.wireViewport();
     this.connect();
   }
 
+  wireSettingsButton() {
+    const button = must("settings-fab");
+    button.append(createSettingsIcon());
+    // Keep the keyboard where it was: the dialog takes focus while it is open.
+    button.addEventListener("pointerdown", (event) => event.preventDefault());
+    button.addEventListener("click", () => this.openSettings());
+  }
+
+  openSettings() {
+    this.returnFocusToTerminal = this.view.isFocused;
+    this.settings.open({
+      themeChoice: themeChoice(),
+      fontSize: this.view.fontSize,
+      isConnected: this.socket.isOpen,
+    });
+  }
+
   runAction(action) {
-    if (action === "font-up") {
-      this.changeFontSize(FONT.step);
-    } else if (action === "font-down") {
-      this.changeFontSize(-FONT.step);
-    } else if (action === "theme") {
-      setScheme(!isDarkScheme());
-    } else if (action === "paste") {
+    if (action === "settings") {
+      this.openSettings();
+      return;
+    }
+    if (action === "paste") {
       this.pasteFromClipboard();
     } else if (action === "copy") {
       this.copySelection();
@@ -511,7 +663,13 @@ class TerminalApp {
   }
 
   wireViewport() {
-    // The pre-paint script in index.html owns the initial scheme.
+    // The pre-paint script in index.html owns the initial scheme. A theme set
+    // to "system" has to follow the OS while the page is open.
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (themeChoice() === "system") {
+        applyTheme("system");
+      }
+    });
     // The token values change under us when the scheme flips; re-read them.
     new MutationObserver(() => this.view.applyTheme()).observe(document.documentElement, {
       attributes: true,
@@ -556,11 +714,13 @@ class TerminalApp {
       await this.socket.connect(this.view.columns, this.view.rows);
     } catch (error) {
       console.error("[terminal] connect failed", error);
+      this.settings.syncConnection(false);
       if (error instanceof SessionExpiredError) {
+        // Reconnecting cannot mint a new session; only a reload can.
         this.showOverlay("Login session expired — reload the page to sign in again");
         return;
       }
-      this.showOverlay("Could not reach the terminal");
+      this.showOverlay("Could not reach the terminal", { isRetryable: true });
       this.scheduleReconnect();
     }
   }
@@ -568,6 +728,7 @@ class TerminalApp {
   handleOpen() {
     this.attempt = 0;
     this.hideOverlay();
+    this.settings.syncConnection(true);
     this.view.fit();
     this.view.focus();
   }
@@ -576,7 +737,8 @@ class TerminalApp {
     if (this.socket.closedByUser) {
       return;
     }
-    this.showOverlay("Connection lost");
+    this.settings.syncConnection(false);
+    this.showOverlay("Connection lost", { isRetryable: true });
     this.scheduleReconnect();
   }
 
@@ -605,10 +767,13 @@ class TerminalApp {
     this.view.setFontSize(next);
   }
 
-  showOverlay(message) {
+  // Notices are transient and never imply a retry; only a lost connection
+  // offers the Reconnect button.
+  showOverlay(message, { isRetryable = false } = {}) {
     clearTimeout(this.noticeTimer);
     this.noticeTimer = null;
     this.overlayText.textContent = message;
+    this.retryButton.hidden = !isRetryable;
     this.overlay.hidden = false;
   }
 

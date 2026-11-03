@@ -15,11 +15,12 @@
     <meta name="color-scheme" content="dark" />
     <title>term</title>
     <script>
-      // Paint the saved scheme before the app loads, so a light page does not
-      // flash dark. The status bar color follows the scheme the same way.
+      // Paint the saved theme before the app loads, so a light page does not
+      // flash dark. "system" (the default) follows the OS setting. The status
+      // bar color follows the scheme the same way.
       try {
-        const scheme = localStorage.getItem("term-remote:theme");
-        const isDark = scheme === "dark" || (scheme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        const choice = localStorage.getItem("term-remote:theme") ?? "system";
+        const isDark = choice === "dark" || (choice !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
         document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
         document.querySelector('meta[name="theme-color"]').setAttribute("content", isDark ? "#1a1a1a" : "#ffffff");
         document.querySelector('meta[name="color-scheme"]').setAttribute("content", isDark ? "dark" : "light");
@@ -42,10 +43,45 @@
       <nav class="keys" id="keys" aria-label="Terminal controls and keys"></nav>
     </div>
 
+    <button class="settings-fab" id="settings-fab" type="button" aria-label="Settings" aria-haspopup="dialog"></button>
+
     <div class="overlay" id="overlay" hidden>
       <p class="overlay-text" id="overlay-text">Disconnected</p>
-      <button class="key" id="retry" type="button">Reconnect</button>
+      <button class="key" id="retry" type="button" hidden>Reconnect</button>
     </div>
+
+    <dialog class="settings" id="settings" aria-labelledby="settings-title">
+      <header class="settings-header">
+        <h2 class="settings-title" id="settings-title">Settings</h2>
+        <button class="key settings-close" id="settings-close" type="button" aria-label="Close settings">×</button>
+      </header>
+
+      <section class="settings-section">
+        <h3 class="settings-label" id="settings-theme-label">Theme</h3>
+        <div class="settings-options" role="group" aria-labelledby="settings-theme-label">
+          <button class="key option" type="button" data-theme-choice="system" aria-pressed="false">System</button>
+          <button class="key option" type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+          <button class="key option" type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3 class="settings-label" id="settings-font-label">Text size</h3>
+        <div class="settings-options" role="group" aria-labelledby="settings-font-label">
+          <button class="key" id="font-down" type="button" aria-label="Smaller text">A−</button>
+          <output class="settings-value" id="font-value">13</output>
+          <button class="key" id="font-up" type="button" aria-label="Larger text">A+</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3 class="settings-label" id="settings-connection-label">Connection</h3>
+        <div class="settings-options" role="group" aria-labelledby="settings-connection-label">
+          <span class="settings-value" id="connection-state">Connected</span>
+          <button class="key" id="reconnect" type="button">Reconnect</button>
+        </div>
+      </section>
+    </dialog>
 
     <script src="/vendor/xterm.js"></script>
     <script src="/vendor/addon-fit.js"></script>

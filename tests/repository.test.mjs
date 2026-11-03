@@ -139,3 +139,27 @@ test("the client uses the ttyd command bytes that the protocol test verifies", (
   assert.match(source, /new WebSocket\(socketUrl\(\), \["tty"\]\)/);
   assert.match(source, /AuthToken/);
 });
+
+test("the settings dialog offers every theme the script knows", () => {
+  const source = read("app/app.js");
+  const markup = read("app/index.html");
+
+  const declared = source.match(/const THEME_CHOICES = \[([^\]]*)\]/);
+  assert.ok(declared, "app.js should declare the theme choices");
+  const choices = [...declared[1].matchAll(/"(\w+)"/g)].map((match) => match[1]);
+
+  assert.ok(choices.includes("system"), "the theme should be able to follow the OS");
+  for (const choice of choices) {
+    assert.ok(markup.includes(`data-theme-choice="${choice}"`), `the settings dialog has no "${choice}" theme`);
+  }
+});
+
+test("only a dropped connection offers the Reconnect button", () => {
+  const source = read("app/app.js");
+
+  for (const call of source.match(/showNotice\([^)]*\)/g) ?? []) {
+    assert.doesNotMatch(call, /isRetryable/, `a transient notice must not offer Reconnect: ${call}`);
+  }
+  assert.match(source, /showOverlay\("Connection lost", \{ isRetryable: true \}\)/);
+  assert.match(source, /showOverlay\("Could not reach the terminal", \{ isRetryable: true \}\)/);
+});

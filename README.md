@@ -124,19 +124,23 @@ safe-area or soft-keyboard handling. `app/` replaces it with:
 - **Copy and paste keys** in the bottom bar: Paste reads the clipboard (with bracketed-paste
   wrapping when the program in the pty asks for it), Copy writes the current selection back.
   Paste needs a tap to satisfy iOS clipboard permission; Copy needs a selection first.
-- **One bottom bar holds everything**: font size, scheme toggle, copy/paste, and the keys — Esc, Tab, sticky
+- **One bottom bar on touch devices** holds Settings, Paste, Copy, and the keys — Esc, Tab, sticky
   Ctrl/Alt, arrows, Home, End, PgUp, PgDn, `|`, `-`, `/`, `~`. Sticky modifiers also apply to the
   next character typed on the soft keyboard, so Ctrl-C and Esc work in vim or tmux. There is no
   header; the terminal owns the whole screen.
+- **No key bar on desktop.** A fine pointer means a real keyboard, so the bar and its keys are
+  hidden and only a small Settings button stays in the corner.
+- **Settings modal** holds the theme (System, Light or Dark), the text size, and the connection
+  state with a Reconnect action. The choices persist in `localStorage`; System follows the OS.
 - **Espresso design system**: colors, radii, and focus rings come from frappe-ui's design tokens
-  (`app/vendor/espresso.css`, generated — see below), with JetBrains Mono for everything. Light and dark schemes both work, with a ◐ toggle; the terminal, the installed
-  app's status bar, and the page all follow the scheme.
+  (`app/vendor/espresso.css`, generated — see below), with JetBrains Mono for everything. The
+  terminal, the installed app's status bar, and the page all follow the chosen theme.
 - **Installable**: Android/Chrome → ⋮ _Add to Home screen_; iOS/Safari → Share → _Add to Home
   Screen_. Runs standalone, with no browser chrome.
 - **Keyboard-aware layout**: `dvh` plus `visualViewport` tracking keeps the key bar above the soft
   keyboard, with notch-safe insets.
-- **Font size** A−/A+ and the scheme toggle ◐ live in the bottom bar; the choice persists in `localStorage`.
-- **Touch scrolling** through scrollback, reconnect with backoff, and a Reconnect button.
+- **Touch scrolling** through scrollback, reconnect with backoff, and a Reconnect button on the
+  overlay only when the connection dropped, never on transient notices.
 - **No service worker, on purpose.** A cached page paired with a fresh script is a terminal that
   never connects, so the shell is served with `Cache-Control: no-cache` and revalidated on every
   load. Installability comes from the manifest alone.
